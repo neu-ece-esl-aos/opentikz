@@ -6,7 +6,7 @@ rides the existing, unedited ``ci.yml`` invocation).
 Scope: only templates carrying the ``esl-architecture`` domain tag are
 adapter-governed (ADR-0005 Phase 2b builds the ESL figure-authoring contract's
 backend #2 — it does not retrofit every template this fork inherited from
-upstream opentikz). Four checks run for each ESL-contract template that ships
+upstream opentikz). Five checks run for each ESL-contract template that ships
 an ``edit_contract``:
 
 1. **Re-derivability** — the checked-in ``edit_contract`` must equal what the
@@ -24,13 +24,20 @@ an ``edit_contract``:
    NOT a validate.py failure (see ``tools/adapter/cli.py grammar`` /
    ``tools/ci/placement-grammar-report.sh`` for the full per-rule verdict
    breakdown, including what's routed to WP-8's rendered-PNG gate).
+5. **circuitikz bipole node identity** (WP-11, cp-4925; circuit-schematic
+   family only) — every ``to[...]`` bipole must carry a ``name=<id>`` key
+   (settled-decisions/circuit-schematic.yaml ``circuitikz-bipole-node-identity``),
+   so it has PGF node identity and is visible to
+   ``render_selfcheck.detect_node_node_collisions`` — see
+   ``bipole_naming_problems``.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from .contract_loader import Contract
-from .derive import derive_edit_contract, load_settled_decisions
+from .derive import derive_edit_contract, load_settled_decisions, strip_tex_comments
 from .intent import (
     IntentRecordError,
     extract_master_header,
@@ -39,6 +46,41 @@ from .intent import (
     master_header_matches_intent,
 )
 from .placement_grammar import placement_grammar_problems
+
+# circuitikz bipole invocation: \draw (a) to[<options>] (b); -- <options> is a
+# comma-separated key/value list with no nested `[`/`]` in this library's
+# templates (see circuitikz-bipole-node-identity below), so a non-greedy scan
+# to the next `]` is sufficient.
+_BIPOLE_RE = re.compile(r"\bto\s*\[([^\[\]]*)\]")
+_BIPOLE_NAME_KEY_RE = re.compile(r"(?:^|,)\s*name\s*=")
+
+
+def bipole_naming_problems(tex_text: str, tex: Path) -> list[str]:
+    """WP-11 (cp-4925), settled-decisions/circuit-schematic.yaml
+    ``circuitikz-bipole-node-identity``: every circuitikz ``to[...]`` bipole
+    must carry a ``name=<id>`` key. Without one, the bipole is a raw drawing
+    path with no PGF/TikZ node identity -- invisible to
+    ``render_selfcheck.detect_node_node_collisions`` (see
+    docs/VISUAL_SELFCHECK.md). This is a source-level, syntactic check (it
+    looks for the literal ``name=`` key, not an expanded value), so it also
+    covers a \\foreach-generated bipole whose name is itself a macro
+    (e.g. ``name=\\devname``) -- the macro still has to be threaded through
+    the foreach list at the source level for this to pass.
+    """
+    text = strip_tex_comments(tex_text)
+    problems: list[str] = []
+    for m in _BIPOLE_RE.finditer(text):
+        opts = m.group(1)
+        if not _BIPOLE_NAME_KEY_RE.search(opts):
+            line = text.count("\n", 0, m.start()) + 1
+            problems.append(
+                f"{tex}:{line}: circuitikz bipole 'to[{opts.strip()}]' has no "
+                "name=<id> key -- every to[...] bipole in the circuit-schematic "
+                "family must carry one (settled-decisions/circuit-schematic.yaml "
+                "circuitikz-bipole-node-identity) so it has PGF node identity and "
+                "is visible to render_selfcheck.detect_node_node_collisions"
+            )
+    return problems
 
 _DERIVED_FIELDS = ("node_naming", "styles", "parameters", "invariants")
 
@@ -121,5 +163,9 @@ def adapter_problems(meta: dict, tex: Path, template_dir: Path, contract: Contra
 
     # --- check 4: placement-grammar (WP-7) ------------------------------ #
     problems.extend(placement_grammar_problems(tex_text, intent, settled_decisions, tex_path=tex))
+
+    # --- check 5: circuitikz bipole node identity (WP-11) --------------- #
+    if intent.family == "circuit-schematic":
+        problems.extend(bipole_naming_problems(tex_text, tex))
 
     return problems

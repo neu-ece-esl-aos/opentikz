@@ -265,10 +265,28 @@ def detect_diagonal_edges(
 
 
 def _extract_node_bboxes_texframe(log: str) -> dict[str, tuple[float, float, float, float]]:
-    """Return {node_name: (sx,sy,ex,ey)} in tex-pt, y-up, picture-local origin."""
+    """Return {node_name: (sx,sy,ex,ey)} in tex-pt, y-up, picture-local origin,
+    normalized so ``sx<=ex`` and ``sy<=ey`` (a true south-west/north-east box).
+
+    ``\\pgfpointanchor``'s ``south west``/``north east`` queries are answered
+    in the node's OWN local frame, then mapped through whatever canvas
+    rotation is active -- for an ordinary (unrotated) ``\\node`` that frame
+    lines up with the picture's global axes, but a circuitikz bipole draws
+    its symbol rotated to lie along the wire it is placed on (e.g. a bipole
+    running top-to-bottom between two vertically-stacked nodes), so its
+    "south west"/"north east" anchors can land with a LARGER global y than
+    its "north east" -- the corners are correct, just not already
+    min/max-ordered. Left un-normalized, a negative-area box silently
+    vanishes from every consumer below (``detect_node_node_collisions``'s
+    ``area <= 0: continue`` guard, ``_distance_to_bbox``'s min/max-vs-point
+    logic) -- exactly why a name=<id> bipole compiled cleanly through this
+    probe yet still produced zero reported collisions against a genuinely
+    overlapping node, until this normalization was added (WP-11, cp-4925).
+    """
     boxes: dict[str, tuple[float, float, float, float]] = {}
     for m in _BBOX_NODE_RE.finditer(log):
-        boxes[m.group(1)] = tuple(float(g) for g in m.groups()[1:])  # type: ignore[assignment]
+        sx, sy, ex, ey = (float(g) for g in m.groups()[1:])
+        boxes[m.group(1)] = (min(sx, ex), min(sy, ey), max(sx, ex), max(sy, ey))
     return boxes
 
 

@@ -165,6 +165,19 @@ they're already what `ci.yml` invokes.
   `"selfcheck": {"allow_diagonal_edges": true, "allow_diagonal_edges_reason":
   "..."}` in its `meta.json` for a genuinely intentional diagonal — a
   committed, diff-visible waiver, never a runtime agent decision.
+  **A circuitikz bipole (`to[R]`, `to[I]`, ...) IS covered by this check the
+  moment it carries a `name=<id>` key**: `name=` gives circuitikz's own
+  bipole a real PGF node (plus `<id>start`/`<id>end`/`<id>label` anchors),
+  which the `every node/.append style` hook above already fires for, exactly
+  like any other named node — no separate code path, no new tooling (WP-11,
+  cp-4925). For the `circuit-schematic` family this is not optional: every
+  `to[...]` bipole is *required* to carry `name=<id>`
+  (`settled-decisions/circuit-schematic.yaml`'s
+  `circuitikz-bipole-node-identity`), enforced statically by
+  `tools/adapter/checks.py::bipole_naming_problems` — a template with an
+  unnamed bipole in this family fails `validate.py --strict` outright, before
+  any render is even attempted. See "Demonstrated catches" below for the
+  `esl-crossbar-kcl` case this was built to close.
 
 **Mechanically checked but NOT what makes this gate trustworthy on its own:**
 these checks are the "anything mechanically detectable" ADR-0005 §D6 asks CI
@@ -176,12 +189,27 @@ yet). They are also narrow — see the next section for exactly what they miss.
 **Requires the agent (or a human) to look at the image — cannot be automated
 with the toolchain available here:**
 
-- **Symbol/graphic overlap involving a non-node element** (part of checklist
-  item 2) — a circuitikz bipole (`to[R]`, `to[I]`, ...) is drawn as a raw
-  path, not a named TikZ node, so it is invisible to the node-collision
-  check. **This is not a hypothetical gap**: it is exactly why the
-  `esl-crossbar-kcl` catch below (a KCL node overlapping a circuitikz device
-  symbol) is reported as mechanically clean.
+- **Symbol/graphic overlap involving a genuinely un-named element** (part of
+  checklist item 2). This was previously documented here as a *permanent*
+  toolchain limit — it is not, and stating it that way was itself the
+  problem: it stopped two follow-on agents (WP-7, WP-8's successor) from even
+  trying. **WP-11 (cp-4925) closed the concrete case**: a circuitikz bipole
+  is a raw drawing path with no PGF node identity ONLY as long as it carries
+  no `name=<id>` key; add one and it becomes a real, named node the existing
+  `detect_node_node_collisions` probe already covers — no new tooling, and
+  for the `circuit-schematic` family it is no longer a matter of remembering
+  to add it: an unnamed `to[...]` bipole fails `validate.py --strict`
+  outright (`tools/adapter/checks.py::bipole_naming_problems`). What
+  genuinely remains un-automatable, stated honestly rather than declared
+  unsolvable: (a) any bipole a template author still leaves unnamed in a
+  family this rule does NOT cover (today: `flow` and `architecture` — a
+  `circuit-schematic`-only rule, since only that family draws circuitikz
+  bipoles at all), and (b) any other anonymous decorative path with no node
+  identity of any kind (a `\draw` with no `\node`/bipole behind it at all —
+  nothing to hook `every node/.append style` onto). Both are real, but both
+  are now a matter of **whether a convention was actually applied**, not an
+  unclosable toolchain gap — which is exactly why this is enforced
+  (`checks.py`), not merely documented as a best practice.
 - **Legibility at a specific print size** (item 5) — resolution/scale is a
   judgment call about a target venue, not a pass/fail geometry check.
 - **The `check_questions` semantic gate** (item 6) — inherently requires
@@ -194,7 +222,7 @@ read the PNG anyway.
 
 ## Demonstrated catches
 
-### `esl-crossbar-kcl` (fixed by WP-5/cp-4894) — symbol overlap invisible to any mechanical check
+### `esl-crossbar-kcl` (fixed by WP-5/cp-4894; made mechanically catchable by WP-11/cp-4925) — symbol overlap that no longer needs an agent's eyes
 
 Run originally against the ported `esl-crossbar-kcl` fixture
 (`tools/render_selfcheck.py templates/esl-crossbar-kcl`): the mechanical
@@ -217,18 +245,60 @@ in **both** columns (zoomed crop, also the pre-fix state:
   outright — the two circles visually merged.
 
 This was a **symbol/node overlap** (checklist item 2) where the "node" on one
-side is a circuitikz bipole, not a TikZ node — a real, principled toolchain
-limit (see above), not an unscoped gap that the node-collision check could
-have caught. It was found exactly the way this gate requires: compile,
-render, and *look* — the mechanical checks did not and structurally cannot
-catch it. Reported to cp-4883 and to cp-4894 (WP-5, circuit template family).
-**Fixed by WP-5 (cp-4894):** the KCL-node-to-readout-device offset was
-`-1.15cm` (too short for circuitikz's default bipole size); `-1.8cm` clears
-the collision for both symbol types, verified by re-rendering. The
-scaled/broadened sibling template `templates/esl-crossbar-kcl-adc/` (three
+side was a circuitikz bipole with no PGF node identity at all — invisible to
+the node-collision check *at the time*, not because the check was
+structurally incapable of it, but because the bipole carried no `name=`.
+It was found the way this gate requires: compile, render, and *look* — the
+mechanical checks available at the time did not catch it. Reported to
+cp-4883 and to cp-4894 (WP-5, circuit template family). **Fixed by WP-5
+(cp-4894):** the KCL-node-to-readout-device offset was `-1.15cm` (too short
+for circuitikz's default bipole size); `-1.8cm` clears the collision for both
+symbol types, verified by re-rendering.
+
+**Closed mechanically by WP-11 (cp-4925):** `name=rsense` / `name=iref` were
+added to the two bipoles (settled-decisions/circuit-schematic.yaml
+`circuitikz-bipole-node-identity`, enforced by
+`tools/adapter/checks.py::bipole_naming_problems`), giving both a real PGF
+node the geometry probe already covers. Reintroducing the original defect in
+a scratch copy (the `-1.8cm` clearance reverted back to the ported fixture's
+`-1.15cm`, `name=` left intact) now fails mechanically, no render-reading
+required:
+
+```
+$ python3 tools/render_selfcheck.py /tmp/wp11-defect/esl-crossbar-kcl
+wrote /tmp/wp11-defect/esl-crossbar-kcl/template.selfcheck.png
+MECHANICAL-ISSUE  /tmp/wp11-defect/esl-crossbar-kcl/template.tex: node 'kcl-1' and node 'rsense' bounding boxes overlap 44% of the smaller node's area -- a collision, not a containment relationship
+$ echo $?
+1
+```
+
+Zoomed crop of the reintroduced defect (the resistor's top lead running into
+the Σ circle in column 1, the current-source circle merging into it in
+column 2 — visually identical to the original pre-WP-5 defect):
+`docs/wp11-name-convention-evidence/esl-crossbar-kcl-defect-reintroduced-zoom.png`.
+The current, fixed `dev` template renders collision-free at the same zoom:
+`docs/wp11-name-convention-evidence/esl-crossbar-kcl-readout-zoom.png`.
+
+(Column 2's `iref`/`kcl-2` overlap comes in under this check's 40%
+`min_ratio` threshold at this particular offset — the current-source glyph is
+smaller than the resistor's — so this run reports one collision, not two;
+column 1 alone is sufficient to demonstrate the check now fires where it
+previously could not, and the real, un-reverted `dev` tree below still passes
+88/88 with zero false positives.) Fixing this also required a real bug in
+`_extract_node_bboxes_texframe`: `\pgfpointanchor`'s `south west`/`north
+east` queries are answered in a node's own (possibly rotated) local frame,
+and a circuitikz bipole drawn along a vertical wire returns those two corners
+with the "north east" corner's y *below* the "south west" corner's — a
+negative-area box that `detect_node_node_collisions`'s `area <= 0: continue`
+guard silently discarded. The extraction step now normalizes every box to
+true `(min-x, min-y, max-x, max-y)` before handing it to any consumer; see
+that function's docstring for detail.
+
+The scaled/broadened sibling template `templates/esl-crossbar-kcl-adc/` (three
 readout device types — resistor, capacitor, current source — plus an ADC
 stage and the domain-band/boundary convention) uses the same collision-free
-clearance from the start; its own render evidence is
+clearance from the start and the same `name=` convention; its own render
+evidence is
 `docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-full.png` and
 `docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-readout-band-zoom.png`
 (600 DPI crop, ~6x a 96 DPI baseline reading size).
