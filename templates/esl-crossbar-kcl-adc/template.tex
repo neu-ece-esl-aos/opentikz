@@ -120,7 +120,10 @@
   % pattern (cp-4856; ADR-0005 D4). ====
   \pgfmathsetmacro{\kclrow}{-(\nrows-1)*\rowgap-\rowgap}
   \def\digitalfitlist{}
-  \foreach \c/\dev/\devlabel in {1/R/$R_{\text{sense}}$, 2/C/$C_{\text{sh}}$, 3/I/$I_{\text{ref}}$} {
+  % name=\devname (cp-4883/WP-11 family-wide ruling, circuitikz-bipole-node-identity) --
+  % gives each column's bipole a PGF node identity, so it is visible to
+  % tools/render_selfcheck.py's detect_node_node_collisions.
+  \foreach \c/\dev/\devlabel/\devname in {1/R/$R_{\text{sense}}$/rsense, 2/C/$C_{\text{sh}}$/csh, 3/I/$I_{\text{ref}}$/iref} {
     \pgfmathsetmacro{\px}{\c*\colgap}
     \node[kclnode] (kcl-\c) at (\px,\kclrow) {$\Sigma$};
     \xdef\analogfitlist{\analogfitlist(kcl-\c)}
@@ -136,7 +139,7 @@
     % these; only circuitikz's `to[...]` bipole syntax can) -- \readoutgap
     % is the fix for the ported fixture's collision defect (see parameters).
     \coordinate (dev-\c) at ($(kcl-\c)+(0,-\readoutgap)$);
-    \draw (kcl-\c) to[\dev, l=\devlabel, o-o] (dev-\c);
+    \draw (kcl-\c) to[\dev, l=\devlabel, o-o, name=\devname] (dev-\c);
     \xdef\analogfitlist{\analogfitlist(dev-\c)}
 
     % ADC (contract §1a `adc`: analog->digital converter, apex-right

@@ -2199,7 +2199,20 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
+        "hierarchy-is-organizer: explicit HIERARCHY/containment is the organizing primitive — tile ⊃ (pe | cpu-core | acc-core | mem-block); state the nesting explicitly so it is checkable and transfers to a nested-graph backend (ELK subgraphs, draw.io containers).",
+        "tiles-on-a-grid: tile containers are laid out on a regular grid (rows x columns), uniform size and gap; the grid is anchored once and every other tile placed relationally off it.",
+        "pes-inside-tiles: pe (and cpu-core / acc-core) nodes sit INSIDE their tile via the tile's fit/opts; a PE never floats outside the tile it belongs to.",
+        "tile-fit-declared-after-members: a tile's boundary fit node is declared AFTER every node it fits, inside an `on background layer` scope, so the tile box renders behind its members rather than occluding them.",
+        "ports-on-boundaries: buses attach at PORTS pinned on the tile/block BOUNDARY at the connection point; an inter-bus/NoC edge attaches to a tile's boundary port, never to a PE interior, and routes orthogonally from there.",
+        "intra-bus-stays-in-tile: intra-bus edges are SHORT and orthogonal, connecting PEs/mem within ONE tile only; they never cross a tile boundary.",
+        "noc-spine-between-tiles: the NoC / inter-bus is routed ORTHOGONALLY along the gaps between tile edges (a spine/mesh between tiles), connecting tile boundary ports, not PE interiors.",
+        "shared-memory-locus: shared-memory (mem-block) sits at ONE consistent locus across the set (e.g. a central spine or a fixed edge), the same place in every figure of the family.",
+        "legend-corner-groupbox: the legend is a group-box in a fixed corner, outside the tile grid; it never overlaps tiles or the NoC spine.",
+        "bus-color-split: intra-bus = Orange, inter-bus/NoC = NavyBlue (contract §2 tokens); consistent.",
+        "bus-dash-split: the inter-tile bus is ALWAYS dashed and the intra-tile bus is ALWAYS solid — this distinction is load-bearing (NoC/global vs. local/tile-internal traffic), independent of and in addition to the color split above.",
+        "core-accents: cpu-core = Aquamarine fill, acc-core = ForestGreen fill; PEs a light green.",
+        "palette-additive-not-remapped: the ESL domain-semantic tokens (core-accent/process-accent/param-accent/ intra-bus/inter-bus) are ADDITIVE to opentikz's five ot* names — never remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.",
+        "containment-is-membership: a node drawn inside a tile IS a member of that tile; no purely decorative nesting."
       ],
       "node_naming": "cpu-core: (core1, core2); acc-core: (acc1, acc2); param-node: (cfg1, cfg2); tile: (tile1, tile2)",
       "operations": [
@@ -2359,7 +2372,31 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'circuit-schematic'; family-specific placement/style/semantic invariants project here once it lands)"
+        "substructure-recognition: recognize known analog SUBSTRUCTURES (current mirror, differential pair, cascode) as the placement UNIT and place them as a block, not transistor-by-transistor; the VMM crossbar-array is this family's concrete ESL substructure. Place blocks first, refine within.",
+        "symmetry-axis: matched/paired devices (a differential pair, mirrored current sources, a symmetric crossbar) are placed SYMMETRICALLY across a shared axis (usually vertical).",
+        "device-orientation: device ORIENTATION (rotation/flip) is part of placement, not just position — orient devices so pins face their connection and mirror matched devices about the symmetry axis.",
+        "power-ground-rails: the power/supply rail is PINNED at the top and the ground rail PINNED at the bottom; rails are placed/connected FIRST (VDD, GND net priority before signal nets).",
+        "signal-flow-direction: signal flows LEFT->RIGHT — primary inputs enter at the left, outputs exit at the right; place stages along that axis.",
+        "rows-are-inputs: crossbar-cell rows run HORIZONTAL; each row is one activation/input line driven from a v-source at the row's left end (rows left->right, row index increases downward).",
+        "cols-are-weights: crossbar-cell columns run VERTICAL; a column is a weight-cell stack sharing one bitline (column index increases left->right). Use crossbar-array for the grid.",
+        "current-sums-downward: per-column current flows DOWNWARD and accumulates; each column wire below cell (r,c) carries the running sum I_{1,c}+..+I_{r,c} (label it on the segment).",
+        "kcl-at-column-foot: each column terminates in exactly one kcl-node at the column FOOT (below the last cell), tagged \"KCL\"; the column current sums into it.",
+        "adc-below-kcl: the adc sits BELOW the kcl-node row (analog current in from the top apex-side, digital word out the far side); never above or beside the summation.",
+        "analog-digital-split: the analog/digital split is carried by a domain-band + one dashed domain-boundary; the digital region sits BELOW/AFTER the ADC, the analog accumulation above it.",
+        "body-font: Fonts match the chapter body — newtx Times text + math.",
+        "show-dont-tell: No equation/annotation callout boxes in the figure; equations live in \\caption.",
+        "domain-labels-inside-bands: Domain labels sit INSIDE the shaded bands (small italic, top corner).",
+        "comma-subscripts: Two-index subscripts are comma-separated, row then column — G_{i,j}, I_{1,j}.",
+        "concrete-indices: Arrays use concrete indices (G_{2,2}), no generic highlighted exemplar cell.",
+        "typed-wires: Wire color encodes domain — orange=analog current (awire), gray=digital word (dwire), blue=input voltage (vwire) — the token->role binding is reserved and never swapped across the analog/digital or voltage/current domain boundary (e.g. awire never carries a v-source-to-cell edge, vwire never carries a cell-to-KCL edge). Stealth arrowheads everywhere.",
+        "circuitikz-bipole-reservation: circuitikz `to[...]` bipoles are reserved for real EE devices (resistor, current/voltage source, capacitor, etc.); crossbar cells, KCL nodes, and voltage-source glyphs stay the hand-styled figstyle-derived node styles (cell/kclnode/vsource) — never redraw a cell as a circuitikz bipole, and never redraw a real device as a plain hand-styled node. Mixing the two idioms in one figure is intentional and must stay legible (label each readout branch).",
+        "circuitikz-bipole-node-identity: every circuitikz `to[...]` bipole carries `name=<id>` (a short, lowercase, dash-free identifier unique within the figure, e.g. `name=rsense`) -- in addition to, never instead of, the bipole-reservation idiom above.",
+        "kcl-current-label-clearance: every KCL node has a labeled incoming-current annotation (currentlbl) placed clear of neighboring columns.",
+        "palette-additive-not-remapped: the ESL domain-semantic tokens (inputdomain/weightdomain/digitaldomain/ analogdomain) are ADDITIVE to opentikz's five ot* names — never remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.",
+        "kcl-not-sigma-glyph: Column sum is a KCL node (joined lines + a small \"KCL\" tag), not a bare Sigma.",
+        "xw-is-digital-logic: x_i . w_{i,j} is a digital multiply (XNOR for +-1, AND for 0/1); the product gates a per-cell current source labeled DAC — signal is analog ONLY after the DAC.",
+        "running-column-sums: Column wires carry running sums — below (1,1) is I_{1,1}; below (2,1) is I_{1,1}+I_{2,1}; the KCL yields I_j.",
+        "adcbuffer-is-zoomin: adcbuffer is the zoom-in of the Sigma+ADC stage of mixed-signal-mac; keep aligned."
       ],
       "node_naming": "v-source: vin-<row> (generated, index-addressable); crossbar-cell: cell-<row>-<col> (generated, index-addressable); kcl-node: kcl-<col> (generated, index-addressable)",
       "operations": [
@@ -2495,7 +2532,31 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'circuit-schematic'; family-specific placement/style/semantic invariants project here once it lands)"
+        "substructure-recognition: recognize known analog SUBSTRUCTURES (current mirror, differential pair, cascode) as the placement UNIT and place them as a block, not transistor-by-transistor; the VMM crossbar-array is this family's concrete ESL substructure. Place blocks first, refine within.",
+        "symmetry-axis: matched/paired devices (a differential pair, mirrored current sources, a symmetric crossbar) are placed SYMMETRICALLY across a shared axis (usually vertical).",
+        "device-orientation: device ORIENTATION (rotation/flip) is part of placement, not just position — orient devices so pins face their connection and mirror matched devices about the symmetry axis.",
+        "power-ground-rails: the power/supply rail is PINNED at the top and the ground rail PINNED at the bottom; rails are placed/connected FIRST (VDD, GND net priority before signal nets).",
+        "signal-flow-direction: signal flows LEFT->RIGHT — primary inputs enter at the left, outputs exit at the right; place stages along that axis.",
+        "rows-are-inputs: crossbar-cell rows run HORIZONTAL; each row is one activation/input line driven from a v-source at the row's left end (rows left->right, row index increases downward).",
+        "cols-are-weights: crossbar-cell columns run VERTICAL; a column is a weight-cell stack sharing one bitline (column index increases left->right). Use crossbar-array for the grid.",
+        "current-sums-downward: per-column current flows DOWNWARD and accumulates; each column wire below cell (r,c) carries the running sum I_{1,c}+..+I_{r,c} (label it on the segment).",
+        "kcl-at-column-foot: each column terminates in exactly one kcl-node at the column FOOT (below the last cell), tagged \"KCL\"; the column current sums into it.",
+        "adc-below-kcl: the adc sits BELOW the kcl-node row (analog current in from the top apex-side, digital word out the far side); never above or beside the summation.",
+        "analog-digital-split: the analog/digital split is carried by a domain-band + one dashed domain-boundary; the digital region sits BELOW/AFTER the ADC, the analog accumulation above it.",
+        "body-font: Fonts match the chapter body — newtx Times text + math.",
+        "show-dont-tell: No equation/annotation callout boxes in the figure; equations live in \\caption.",
+        "domain-labels-inside-bands: Domain labels sit INSIDE the shaded bands (small italic, top corner).",
+        "comma-subscripts: Two-index subscripts are comma-separated, row then column — G_{i,j}, I_{1,j}.",
+        "concrete-indices: Arrays use concrete indices (G_{2,2}), no generic highlighted exemplar cell.",
+        "typed-wires: Wire color encodes domain — orange=analog current (awire), gray=digital word (dwire), blue=input voltage (vwire) — the token->role binding is reserved and never swapped across the analog/digital or voltage/current domain boundary (e.g. awire never carries a v-source-to-cell edge, vwire never carries a cell-to-KCL edge). Stealth arrowheads everywhere.",
+        "circuitikz-bipole-reservation: circuitikz `to[...]` bipoles are reserved for real EE devices (resistor, current/voltage source, capacitor, etc.); crossbar cells, KCL nodes, and voltage-source glyphs stay the hand-styled figstyle-derived node styles (cell/kclnode/vsource) — never redraw a cell as a circuitikz bipole, and never redraw a real device as a plain hand-styled node. Mixing the two idioms in one figure is intentional and must stay legible (label each readout branch).",
+        "circuitikz-bipole-node-identity: every circuitikz `to[...]` bipole carries `name=<id>` (a short, lowercase, dash-free identifier unique within the figure, e.g. `name=rsense`) -- in addition to, never instead of, the bipole-reservation idiom above.",
+        "kcl-current-label-clearance: every KCL node has a labeled incoming-current annotation (currentlbl) placed clear of neighboring columns.",
+        "palette-additive-not-remapped: the ESL domain-semantic tokens (inputdomain/weightdomain/digitaldomain/ analogdomain) are ADDITIVE to opentikz's five ot* names — never remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.",
+        "kcl-not-sigma-glyph: Column sum is a KCL node (joined lines + a small \"KCL\" tag), not a bare Sigma.",
+        "xw-is-digital-logic: x_i . w_{i,j} is a digital multiply (XNOR for +-1, AND for 0/1); the product gates a per-cell current source labeled DAC — signal is analog ONLY after the DAC.",
+        "running-column-sums: Column wires carry running sums — below (1,1) is I_{1,1}; below (2,1) is I_{1,1}+I_{2,1}; the KCL yields I_j.",
+        "adcbuffer-is-zoomin: adcbuffer is the zoom-in of the Sigma+ADC stage of mixed-signal-mac; keep aligned."
       ],
       "node_naming": "v-source: (vin-1, vin-2); crossbar-cell: (cell-1-1, cell-2-1, cell-1-2, cell-2-2); kcl-node: (kcl-1, kcl-2)",
       "operations": [
@@ -2513,7 +2574,7 @@
         },
         {
           "id": "add-readout-device",
-          "summary": "declare \\coordinate (dev-<c>) at ($(kcl-<c>)+(0,-1.8)$); then \\draw (kcl-<c>) to[<device>, l=$<label>$, o-o] (dev-<c>); -- <device> is a real circuitikz bipole key (R, I, C, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes. -1.8 is the minimum offset verified collision-free by rendering to PNG (WP-5 fix for the original -1.15, which visually overlapped the KCL node) -- never shrink it back without re-verifying from a render"
+          "summary": "declare \\coordinate (dev-<c>) at ($(kcl-<c>)+(0,-1.8)$); then \\draw (kcl-<c>) to[<device>, l=$<label>$, o-o, name=<id>] (dev-<c>); -- <device> is a real circuitikz bipole key (R, I, C, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes. name=<id> is required (settled-decisions/circuit-schematic.yaml circuitikz-bipole-node-identity; enforced by tools/adapter/checks.py) -- a short, lowercase, unique-per-figure identifier that gives the bipole PGF node identity so detect_node_node_collisions can see it. -1.8 is the minimum offset verified collision-free by rendering to PNG (WP-5 fix for the original -1.15, which visually overlapped the KCL node) -- never shrink it back without re-verifying from a render"
         },
         {
           "id": "recolor-role",
@@ -2610,7 +2671,31 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'circuit-schematic'; family-specific placement/style/semantic invariants project here once it lands)"
+        "substructure-recognition: recognize known analog SUBSTRUCTURES (current mirror, differential pair, cascode) as the placement UNIT and place them as a block, not transistor-by-transistor; the VMM crossbar-array is this family's concrete ESL substructure. Place blocks first, refine within.",
+        "symmetry-axis: matched/paired devices (a differential pair, mirrored current sources, a symmetric crossbar) are placed SYMMETRICALLY across a shared axis (usually vertical).",
+        "device-orientation: device ORIENTATION (rotation/flip) is part of placement, not just position — orient devices so pins face their connection and mirror matched devices about the symmetry axis.",
+        "power-ground-rails: the power/supply rail is PINNED at the top and the ground rail PINNED at the bottom; rails are placed/connected FIRST (VDD, GND net priority before signal nets).",
+        "signal-flow-direction: signal flows LEFT->RIGHT — primary inputs enter at the left, outputs exit at the right; place stages along that axis.",
+        "rows-are-inputs: crossbar-cell rows run HORIZONTAL; each row is one activation/input line driven from a v-source at the row's left end (rows left->right, row index increases downward).",
+        "cols-are-weights: crossbar-cell columns run VERTICAL; a column is a weight-cell stack sharing one bitline (column index increases left->right). Use crossbar-array for the grid.",
+        "current-sums-downward: per-column current flows DOWNWARD and accumulates; each column wire below cell (r,c) carries the running sum I_{1,c}+..+I_{r,c} (label it on the segment).",
+        "kcl-at-column-foot: each column terminates in exactly one kcl-node at the column FOOT (below the last cell), tagged \"KCL\"; the column current sums into it.",
+        "adc-below-kcl: the adc sits BELOW the kcl-node row (analog current in from the top apex-side, digital word out the far side); never above or beside the summation.",
+        "analog-digital-split: the analog/digital split is carried by a domain-band + one dashed domain-boundary; the digital region sits BELOW/AFTER the ADC, the analog accumulation above it.",
+        "body-font: Fonts match the chapter body — newtx Times text + math.",
+        "show-dont-tell: No equation/annotation callout boxes in the figure; equations live in \\caption.",
+        "domain-labels-inside-bands: Domain labels sit INSIDE the shaded bands (small italic, top corner).",
+        "comma-subscripts: Two-index subscripts are comma-separated, row then column — G_{i,j}, I_{1,j}.",
+        "concrete-indices: Arrays use concrete indices (G_{2,2}), no generic highlighted exemplar cell.",
+        "typed-wires: Wire color encodes domain — orange=analog current (awire), gray=digital word (dwire), blue=input voltage (vwire) — the token->role binding is reserved and never swapped across the analog/digital or voltage/current domain boundary (e.g. awire never carries a v-source-to-cell edge, vwire never carries a cell-to-KCL edge). Stealth arrowheads everywhere.",
+        "circuitikz-bipole-reservation: circuitikz `to[...]` bipoles are reserved for real EE devices (resistor, current/voltage source, capacitor, etc.); crossbar cells, KCL nodes, and voltage-source glyphs stay the hand-styled figstyle-derived node styles (cell/kclnode/vsource) — never redraw a cell as a circuitikz bipole, and never redraw a real device as a plain hand-styled node. Mixing the two idioms in one figure is intentional and must stay legible (label each readout branch).",
+        "circuitikz-bipole-node-identity: every circuitikz `to[...]` bipole carries `name=<id>` (a short, lowercase, dash-free identifier unique within the figure, e.g. `name=rsense`) -- in addition to, never instead of, the bipole-reservation idiom above.",
+        "kcl-current-label-clearance: every KCL node has a labeled incoming-current annotation (currentlbl) placed clear of neighboring columns.",
+        "palette-additive-not-remapped: the ESL domain-semantic tokens (inputdomain/weightdomain/digitaldomain/ analogdomain) are ADDITIVE to opentikz's five ot* names — never remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.",
+        "kcl-not-sigma-glyph: Column sum is a KCL node (joined lines + a small \"KCL\" tag), not a bare Sigma.",
+        "xw-is-digital-logic: x_i . w_{i,j} is a digital multiply (XNOR for +-1, AND for 0/1); the product gates a per-cell current source labeled DAC — signal is analog ONLY after the DAC.",
+        "running-column-sums: Column wires carry running sums — below (1,1) is I_{1,1}; below (2,1) is I_{1,1}+I_{2,1}; the KCL yields I_j.",
+        "adcbuffer-is-zoomin: adcbuffer is the zoom-in of the Sigma+ADC stage of mixed-signal-mac; keep aligned."
       ],
       "node_naming": "v-source: vin-<row> (generated, index-addressable); crossbar-cell: cell-<row>-<col> (generated, index-addressable); kcl-node: kcl-<col> (generated, index-addressable); adc: adc-<col> (generated, index-addressable); domain-band: (analogband); domain-band: (digitalband); domain-boundary: (bndL, bndR)",
       "operations": [
@@ -2620,7 +2705,7 @@
         },
         {
           "id": "change-readout-devices",
-          "summary": "edit the `\\c/\\dev/\\devlabel in {...}` \\foreach list's <device> tokens -- any real circuitikz bipole key (R, C, I, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes (cp-4856's confirmed working pattern)"
+          "summary": "edit the `\\c/\\dev/\\devlabel/\\devname in {...}` \\foreach list's <device> tokens -- any real circuitikz bipole key (R, C, I, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes (cp-4856's confirmed working pattern). \\devname must stay a short, lowercase, unique-per-column identifier -- it feeds the bipole's required name=\\devname (settled-decisions/circuit-schematic.yaml circuitikz-bipole-node-identity; enforced by tools/adapter/checks.py)"
         },
         {
           "id": "adjust-readout-clearance",
@@ -2749,7 +2834,17 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
+        "monotone-stage-direction: proc-stage / task-node flow is MONOTONE along one axis (L->R or T->B, pick one per figure); every flow-edge advances in that direction — no backward main-axis edge.",
+        "layer-assignment: nodes at equal dependency DEPTH align to a common layer/rank perpendicular to the flow axis (Sugiyama layer assignment); a node sits one layer past its latest predecessor. Fork/join alignment is the special case of this.",
+        "crossing-minimization: order nodes WITHIN a layer to minimize edge crossings (Sugiyama crossing minimization); reorder siblings before accepting a crossing.",
+        "edges-follow-data: a flow-edge points from producer to consumer in the data's direction; its label names what flows/the dependency; edges never cross a node they don't touch.",
+        "fork-join-alignment: branches of a fork start aligned on the cross-axis and re-align at their join node; parallel siblings share a cross-axis coordinate (a layer, per layer-assignment).",
+        "params-off-axis: param-node artifacts sit OFF the main flow axis (offset to the side), tied to their stage by a short edge; they are inputs, not pipeline stages.",
+        "timeline-pinned-axis: (timeline/sequence) a timeline is a LAYERED layout with one axis PINNED to a shared external coordinate (time) — all lifelines register against ONE shared time-axis, events at the same time align across lifelines (the pinned axis replaces free layer assignment), and a life-message never runs backward in time.",
+        "lifelines-parallel: (sequence) lifelines are parallel, evenly spaced, one per actor; sync-markers sit ON their lifeline; a life-message connects two lifelines at a single time depth.",
+        "stage-vs-param-accent: proc-stage = NavyBlue accent, param-node = ForestGreen chamfered box (§2 tokens).",
+        "stealth-everywhere: all directed edges (flow-edge, life-message, time-axis) use Stealth arrowheads.",
+        "acyclic-unless-marked: the main flow is acyclic; a genuine feedback edge is drawn distinctly (dashed)."
       ],
       "node_naming": "task-node: (task-a); task-node: (task-b); proc-stage: stage-<i> (generated, index-addressable); param-node: (param-out); group-box: (fusedgroup)",
       "operations": [
@@ -2885,7 +2980,20 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
+        "hierarchy-is-organizer: explicit HIERARCHY/containment is the organizing primitive — tile ⊃ (pe | cpu-core | acc-core | mem-block); state the nesting explicitly so it is checkable and transfers to a nested-graph backend (ELK subgraphs, draw.io containers).",
+        "tiles-on-a-grid: tile containers are laid out on a regular grid (rows x columns), uniform size and gap; the grid is anchored once and every other tile placed relationally off it.",
+        "pes-inside-tiles: pe (and cpu-core / acc-core) nodes sit INSIDE their tile via the tile's fit/opts; a PE never floats outside the tile it belongs to.",
+        "tile-fit-declared-after-members: a tile's boundary fit node is declared AFTER every node it fits, inside an `on background layer` scope, so the tile box renders behind its members rather than occluding them.",
+        "ports-on-boundaries: buses attach at PORTS pinned on the tile/block BOUNDARY at the connection point; an inter-bus/NoC edge attaches to a tile's boundary port, never to a PE interior, and routes orthogonally from there.",
+        "intra-bus-stays-in-tile: intra-bus edges are SHORT and orthogonal, connecting PEs/mem within ONE tile only; they never cross a tile boundary.",
+        "noc-spine-between-tiles: the NoC / inter-bus is routed ORTHOGONALLY along the gaps between tile edges (a spine/mesh between tiles), connecting tile boundary ports, not PE interiors.",
+        "shared-memory-locus: shared-memory (mem-block) sits at ONE consistent locus across the set (e.g. a central spine or a fixed edge), the same place in every figure of the family.",
+        "legend-corner-groupbox: the legend is a group-box in a fixed corner, outside the tile grid; it never overlaps tiles or the NoC spine.",
+        "bus-color-split: intra-bus = Orange, inter-bus/NoC = NavyBlue (contract §2 tokens); consistent.",
+        "bus-dash-split: the inter-tile bus is ALWAYS dashed and the intra-tile bus is ALWAYS solid — this distinction is load-bearing (NoC/global vs. local/tile-internal traffic), independent of and in addition to the color split above.",
+        "core-accents: cpu-core = Aquamarine fill, acc-core = ForestGreen fill; PEs a light green.",
+        "palette-additive-not-remapped: the ESL domain-semantic tokens (core-accent/process-accent/param-accent/ intra-bus/inter-bus) are ADDITIVE to opentikz's five ot* names — never remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.",
+        "containment-is-membership: a node drawn inside a tile IS a member of that tile; no purely decorative nesting."
       ],
       "node_naming": "tile: tile-<t> (generated, index-addressable); pe: pe-<t>-<k> (generated, index-addressable); mem-block: (mem)",
       "operations": [
@@ -3012,7 +3120,20 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
+        "hierarchy-is-organizer: explicit HIERARCHY/containment is the organizing primitive — tile ⊃ (pe | cpu-core | acc-core | mem-block); state the nesting explicitly so it is checkable and transfers to a nested-graph backend (ELK subgraphs, draw.io containers).",
+        "tiles-on-a-grid: tile containers are laid out on a regular grid (rows x columns), uniform size and gap; the grid is anchored once and every other tile placed relationally off it.",
+        "pes-inside-tiles: pe (and cpu-core / acc-core) nodes sit INSIDE their tile via the tile's fit/opts; a PE never floats outside the tile it belongs to.",
+        "tile-fit-declared-after-members: a tile's boundary fit node is declared AFTER every node it fits, inside an `on background layer` scope, so the tile box renders behind its members rather than occluding them.",
+        "ports-on-boundaries: buses attach at PORTS pinned on the tile/block BOUNDARY at the connection point; an inter-bus/NoC edge attaches to a tile's boundary port, never to a PE interior, and routes orthogonally from there.",
+        "intra-bus-stays-in-tile: intra-bus edges are SHORT and orthogonal, connecting PEs/mem within ONE tile only; they never cross a tile boundary.",
+        "noc-spine-between-tiles: the NoC / inter-bus is routed ORTHOGONALLY along the gaps between tile edges (a spine/mesh between tiles), connecting tile boundary ports, not PE interiors.",
+        "shared-memory-locus: shared-memory (mem-block) sits at ONE consistent locus across the set (e.g. a central spine or a fixed edge), the same place in every figure of the family.",
+        "legend-corner-groupbox: the legend is a group-box in a fixed corner, outside the tile grid; it never overlaps tiles or the NoC spine.",
+        "bus-color-split: intra-bus = Orange, inter-bus/NoC = NavyBlue (contract §2 tokens); consistent.",
+        "bus-dash-split: the inter-tile bus is ALWAYS dashed and the intra-tile bus is ALWAYS solid — this distinction is load-bearing (NoC/global vs. local/tile-internal traffic), independent of and in addition to the color split above.",
+        "core-accents: cpu-core = Aquamarine fill, acc-core = ForestGreen fill; PEs a light green.",
+        "palette-additive-not-remapped: the ESL domain-semantic tokens (core-accent/process-accent/param-accent/ intra-bus/inter-bus) are ADDITIVE to opentikz's five ot* names — never remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.",
+        "containment-is-membership: a node drawn inside a tile IS a member of that tile; no purely decorative nesting."
       ],
       "node_naming": "tile: tile-<row>-<col> (generated, index-addressable); pe: pe-<row>-<col>-<k> (generated, index-addressable)",
       "operations": [
@@ -3158,7 +3279,17 @@
       "invariants": [
         "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-        "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
+        "monotone-stage-direction: proc-stage / task-node flow is MONOTONE along one axis (L->R or T->B, pick one per figure); every flow-edge advances in that direction — no backward main-axis edge.",
+        "layer-assignment: nodes at equal dependency DEPTH align to a common layer/rank perpendicular to the flow axis (Sugiyama layer assignment); a node sits one layer past its latest predecessor. Fork/join alignment is the special case of this.",
+        "crossing-minimization: order nodes WITHIN a layer to minimize edge crossings (Sugiyama crossing minimization); reorder siblings before accepting a crossing.",
+        "edges-follow-data: a flow-edge points from producer to consumer in the data's direction; its label names what flows/the dependency; edges never cross a node they don't touch.",
+        "fork-join-alignment: branches of a fork start aligned on the cross-axis and re-align at their join node; parallel siblings share a cross-axis coordinate (a layer, per layer-assignment).",
+        "params-off-axis: param-node artifacts sit OFF the main flow axis (offset to the side), tied to their stage by a short edge; they are inputs, not pipeline stages.",
+        "timeline-pinned-axis: (timeline/sequence) a timeline is a LAYERED layout with one axis PINNED to a shared external coordinate (time) — all lifelines register against ONE shared time-axis, events at the same time align across lifelines (the pinned axis replaces free layer assignment), and a life-message never runs backward in time.",
+        "lifelines-parallel: (sequence) lifelines are parallel, evenly spaced, one per actor; sync-markers sit ON their lifeline; a life-message connects two lifelines at a single time depth.",
+        "stage-vs-param-accent: proc-stage = NavyBlue accent, param-node = ForestGreen chamfered box (§2 tokens).",
+        "stealth-everywhere: all directed edges (flow-edge, life-message, time-axis) use Stealth arrowheads.",
+        "acyclic-unless-marked: the main flow is acyclic; a genuine feedback edge is drawn distinctly (dashed)."
       ],
       "node_naming": "time-axis: (timeaxis); lifeline: lifeline-<i> (generated, index-addressable); sync-marker: sync-<i> (generated, index-addressable)",
       "operations": [

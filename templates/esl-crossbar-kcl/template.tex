@@ -107,8 +107,11 @@
   % for both the resistor and current-source symbols (WP-5, ADR-0005 D4/D6).
   \coordinate (dev-1) at ($(kcl-1)+(0,-1.8)$);
   \coordinate (dev-2) at ($(kcl-2)+(0,-1.8)$);
-  \draw (kcl-1) to[R=$R_{\text{sense}}$, o-o] (dev-1);
-  \draw (kcl-2) to[I, l=$I_{\text{ref}}$, o-o] (dev-2);
+  % name=<id> (cp-4883/WP-11 family-wide ruling, circuitikz-bipole-node-identity) --
+  % gives the bipole itself a PGF node identity, so it is visible to
+  % tools/render_selfcheck.py's detect_node_node_collisions.
+  \draw (kcl-1) to[R=$R_{\text{sense}}$, o-o, name=rsense] (dev-1);
+  \draw (kcl-2) to[I, l=$I_{\text{ref}}$, o-o, name=iref] (dev-2);
 
   \node[sidenote, below=2pt of dev-1, xshift=-9pt] {col.\,1 readout};
   \node[sidenote, below=2pt of dev-2, xshift=9pt] {col.\,2 readout};
