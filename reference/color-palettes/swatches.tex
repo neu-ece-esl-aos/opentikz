@@ -1,6 +1,7 @@
 \documentclass[border=8pt]{standalone}
 
 % Visual reference for the OpenTikZ palette (reference/color-palettes/color-palettes.md).
+\usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 
 % --- palette: light / default (canonical, Okabe-Ito) ---
@@ -16,6 +17,16 @@
 \definecolor{otpurpleDk}{HTML}{E08FBE}
 \definecolor{otgrayDk}{HTML}{B3B3B3}
 \definecolor{otpaper}{HTML}{1E1E1E}
+% --- ESL domain-semantic tokens (contract §2, ADR-0005 D7 — extends, not remaps) ---
+\colorlet{inputdomain}{blue}
+\colorlet{weightdomain}{green}
+\colorlet{digitaldomain}{gray}
+\colorlet{analogdomain}{orange}
+\colorlet{intra-bus}{Orange}
+\colorlet{inter-bus}{NavyBlue}
+\colorlet{core-accent}{Aquamarine}
+\colorlet{process-accent}{NavyBlue}
+\colorlet{param-accent}{ForestGreen}
 
 \begin{document}
 \begin{tikzpicture}[
@@ -50,6 +61,33 @@
       \node[swatch, fill=\c, draw=white!25] (s) at (\i*\dx, 0) {};
       \node[swname, text=white]    at ([yshift=-0.06cm]s.south) {\c};
       \node[swhex,  text=white!70] at ([yshift=-0.44cm]s.south) {\#\h};
+    }
+  \end{scope}
+
+  % ===== ESL domain-semantic tokens (contract §2, ADR-0005 D7/WP-3) =====
+  % NB the swatch fill is the contract's TeX/xcolor "Default hue" binding; the
+  % caption number is the separate "Neutral hex" fallback for non-TeX consumers
+  % (contract §2) -- the two are independent by design and need not match, unlike
+  % the Light/Dark rows above where both columns are the same \definecolor value.
+  \node[font=\scriptsize\itshape, text=black!55, anchor=west]
+    at (-1.45, -6.15) {swatch = TeX hue binding; caption = contract's separate non-TeX neutral-hex fallback};
+  \begin{scope}[yshift=-6.9cm]
+    \node[rowlbl] at (-1.45, 0) {ESL};
+    \foreach \i/\c/\h in {%
+        0/inputdomain/2B6CB0, 1/weightdomain/2F8F4E, 2/digitaldomain/7A7A7A,
+        3/analogdomain/E08A1E} {
+      \node[swatch, fill=\c] (s) at (\i*\dx, 0) {};
+      \node[swname, text=black]   at ([yshift=-0.06cm]s.south) {\c};
+      \node[swhex,  text=black!55] at ([yshift=-0.44cm]s.south) {\#\h};
+    }
+  \end{scope}
+  \begin{scope}[yshift=-8.9cm]
+    \foreach \i/\c/\h in {%
+        0/intra-bus/E8890C, 1/inter-bus/1F3A93, 2/core-accent/4FB8A8,
+        3/process-accent/1F3A93, 4/param-accent/228B22} {
+      \node[swatch, fill=\c] (s) at (\i*\dx, 0) {};
+      \node[swname, text=black]   at ([yshift=-0.06cm]s.south) {\c};
+      \node[swhex,  text=black!55] at ([yshift=-0.44cm]s.south) {\#\h};
     }
   \end{scope}
 \end{tikzpicture}

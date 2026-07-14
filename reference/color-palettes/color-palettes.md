@@ -60,6 +60,79 @@ look washed-out grey, which is the usual "the dark palette looks broken" mistake
 > background. A future enhancement could define dark-aware tints (e.g. mix toward
 > `otpaper`). For MVP, the full colors + `\pagecolor{otpaper}` read fine.
 
+## ESL domain-semantic tokens (contract §2 extension — ADR-0005 D7, WP-3)
+
+These **extend** the palette above; they do not remap the ESL domain-semantic
+figure families (analog-AI circuit schematics, tsarilp-style MPSoC architecture
+blocks) onto the five `ot*` names. Source of truth:
+`contract/backend-contract-v1.2.0.md` §2 (vendored, read-only — see
+`contract/CONTRACT.md`). **Token → role binding is frozen by the contract**: a
+host document may re-hue a token but must keep its role; `tools/validate.py`
+fails the build if this table drifts from the vendored contract's §2 table
+(`_palette_contract_drift_problem`).
+
+| Token | Role / meaning | Default hue | Neutral hex |
+|---|---|---|---|
+| `inputdomain` | inputs / activations | blue | `#2B6CB0` |
+| `weightdomain` | analog weight cells | green | `#2F8F4E` |
+| `digitaldomain` | digital words / logic | gray | `#7A7A7A` |
+| `analogdomain` | analog current / accumulation | orange | `#E08A1E` |
+| `intra-bus` | intra-tile interconnect | Orange | `#E8890C` |
+| `inter-bus` | inter-tile interconnect | NavyBlue | `#1F3A93` |
+| `core-accent` | processing-core fill accent | Aquamarine / ForestGreen | `#4FB8A8` |
+| `process-accent` | flow transform-stage accent | NavyBlue | `#1F3A93` |
+| `param-accent` | parameter/artifact box accent | ForestGreen | `#228B22` |
+
+`core-accent`'s contract default hue is dual (`Aquamarine / ForestGreen` — the
+two families that use this role picked different hues). This palette binds it
+to **Aquamarine**, the tsarilp/architecture-family default the ported
+`esl-architecture-block` fixture uses; `param-accent` already carries
+`ForestGreen` for that same family's config/parameter role, so both contract
+hues are represented in the palette, just under their own token names.
+
+**Neutral hex** is the backend-agnostic sRGB fallback for non-TeX consumers of
+this palette (draw.io/SVG backends); it travels with the token, not as part of
+the TeX binding.
+
+### ESL token palette block (mirror into preamble alongside the light/dark block above)
+
+Some of these tokens bind to `dvipsnames` hues (`Aquamarine`, `NavyBlue`,
+`ForestGreen`, `Orange`), so a template using any of them needs
+`\usepackage[dvipsnames]{xcolor}` (plain `\usepackage{xcolor}` does not define
+those names).
+
+```latex
+% --- ESL domain-semantic tokens (contract §2, ADR-0005 D7) ---
+% needs \usepackage[dvipsnames]{xcolor} for Aquamarine/NavyBlue/ForestGreen/Orange
+\colorlet{inputdomain}{blue}
+\colorlet{weightdomain}{green}
+\colorlet{digitaldomain}{gray}
+\colorlet{analogdomain}{orange}
+\colorlet{intra-bus}{Orange}
+\colorlet{inter-bus}{NavyBlue}
+\colorlet{core-accent}{Aquamarine}
+\colorlet{process-accent}{NavyBlue}
+\colorlet{param-accent}{ForestGreen}
+```
+
+### Typography and arrowhead tokens (contract §2)
+
+Carried here too, since they are named in the same contract section — a
+backend maps each to its own font/arrow model; for the TikZ backend:
+
+- `body-font` — match the host manuscript body; **settled: newtx Times, never
+  Computer Modern** (`\usepackage{newtxtext}` in the host document's preamble;
+  content `.tex` files stay standalone-default since they are figures, not the
+  manuscript body — this token governs the *host* document that includes them).
+- `domain-label` — small italic (`font=\small\itshape` or a template's own
+  `domainlbl`-style equivalent).
+- `role-label` — footnotesize (`font=\footnotesize`).
+- `sidenote` — ~6.5pt gray (`font=\fontsize{6.5}{8}\selectfont, text=digitaldomain!55!black`
+  or equivalent neutral-gray tint — a template's `sidenote` style realizes this).
+- **Arrowhead:** `arrow = Stealth` — every directed edge uses TikZ's
+  `arrows.meta` `Stealth` arrowhead (`>=Stealth` in the `tikzpicture` options,
+  as both ESL fixtures already do).
+
 ## How to apply
 
 - **New content**: paste the light block into the preamble; reference colors by
@@ -75,11 +148,16 @@ look washed-out grey, which is the usual "the dark palette looks broken" mistake
 
 ## Constraints
 
-- Never write a hex literal or a stock xcolor name (`blue`, `red`, `green!50`)
-  in content. Always go through the five palette names (tints/shades allowed).
-- Keep the `\definecolor` values byte-for-byte identical to the tables above so
-  every figure shares one palette. `swatches.svg` is the visual reference.
-- These five names are the contract skills target when recoloring — don't rename
-  them.
+- Never write a hex literal or a stock xcolor/dvipsnames name (`blue`, `red`,
+  `green!50`, `Aquamarine`) in content. Always go through a palette name —
+  the five `ot*` names **or** an ESL domain-semantic token above (tints/shades
+  allowed on either). `tools/validate.py` enforces this on every template.
+- Keep the `\definecolor`/`\colorlet` values byte-for-byte identical to the
+  tables above so every figure shares one palette. `swatches.svg` is the
+  visual reference.
+- These five names, plus the nine ESL domain-semantic tokens, are the full
+  palette the contract skills target when recoloring — don't rename them, and
+  don't force the ESL tokens onto the five `ot*` names or vice versa (ADR-0005
+  D7: extend the palette, never remap).
 
 See `swatches.tex` / `swatches.svg` for a rendered reference of both variants.
