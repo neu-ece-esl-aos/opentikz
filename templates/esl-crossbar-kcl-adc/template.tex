@@ -1,0 +1,159 @@
+% esl-crossbar-kcl-adc — A parametric analog VMM crossbar array (\foreach-generated) whose per-column KCL summation feeds a broadened circuitikz readout stage (resistor/capacitor/current-source) and an ADC, with the analog and digital domains drawn as shaded domain-bands separated by a dashed domain-boundary.
+% THESIS: The analog-to-digital boundary is a real, drawn place in the circuit -- everything left of it (crossbar, KCL summation, readout device) is analog current; everything right of it is a digital word, and the domain-band/domain-boundary convention makes that boundary visible, not implicit.
+% Concept grafted from: esl-crossbar-kcl (cp-4856 PoC graft, analog-ai figstyle.tex conventions)
+% Concept grafted from: esl-crossbar-array (cp-4892, WP-4 \foreach generator layer)
+% Intent record: intent.yaml (contract §4 shape; ADR-0005 D3 §4 row).
+\documentclass[tikz, border=10pt]{standalone}
+
+% --- packages (mirror these in template.meta.json "requires") ---
+\usepackage{circuitikz}
+\usepackage{amsmath}
+\usetikzlibrary{arrows.meta, backgrounds, positioning, calc, fit, shapes.geometric}
+
+% --- palette (canonical source: reference/color-palettes/color-palettes.md; light variant) ---
+\definecolor{otgray}{HTML}{5A5A5A}
+% --- ESL domain-semantic tokens (contract §2, ADR-0005 D7 -- extends
+% opentikz's ot* palette, does not remap onto it; see
+% reference/color-palettes/color-palettes.md "ESL domain-semantic tokens").
+\colorlet{inputdomain}{blue}       % inputs / activations
+\colorlet{weightdomain}{green}     % analog weight cells
+\colorlet{digitaldomain}{gray}     % digital words / logic
+\colorlet{analogdomain}{orange}    % analog current / accumulation
+
+\begin{document}
+% ==== parameters (edit these; this is the \foreach generator's parameter
+% surface -- nothing below this block should ever be edited to change array
+% shape/size, per the esl-crossbar-array/WP-4 generator convention) =========
+\def\nrows{2}           % number of crossbar rows (VMM input rows)
+\def\ncols{3}           % number of crossbar columns -- also the number of
+                        % readout-device columns (see \devices below)
+\def\rowgap{1.1}        % vertical gap between input rows (cm)
+\def\colgap{1.7}        % horizontal gap between columns (cm)
+\def\readoutgap{1.8}    % clearance from a KCL node to its readout-device
+                        % coordinate -- this is the fix for the known
+                        % two-colliding-symbols defect (see invariants):
+                        % the ported esl-crossbar-kcl fixture used 1.15cm,
+                        % too short for circuitikz's default bipole size,
+                        % so the KCL node's circle visually overlapped the
+                        % readout device's glyph in every column
+\def\adcgap{1.7}        % clearance from a readout device to its ADC triangle --
+                        % sized so the analog/digital domain-bands (each padded
+                        % around its own content) don't touch or overlap,
+                        % leaving room for the dashed domain-boundary between them
+\def\vlabelprefix{V}    % row voltage-source label prefix
+% =========================================================================
+
+\begin{tikzpicture}[
+    font=\small,
+    >=Stealth,
+    % --- grafted node/wire styles, verbatim names from figstyle.tex ---
+    kclnode/.style={draw, circle, thick, fill=analogdomain!35,
+                    minimum size=6mm, inner sep=0pt},
+    cell/.style={draw, rectangle, thick, fill=weightdomain!15,
+                 minimum width=0.95cm, minimum height=0.60cm,
+                 font=\footnotesize},
+    vsource/.style={draw=inputdomain!55, circle, line width=1pt, fill=inputdomain!18,
+                    minimum size=8mm, inner sep=0pt,
+                    font=\scriptsize\itshape},
+    adcshape/.style={isosceles triangle, isosceles triangle apex angle=70,
+                      draw=otgray!85!black, thick, fill=digitaldomain!18,
+                      minimum height=0.85cm, minimum width=0.85cm, font=\tiny},
+    sidenote/.style={font=\fontsize{6.5}{8}\selectfont, digitaldomain!55!black},
+    domainlbl/.style={font=\fontsize{7}{9}\selectfont\itshape},
+    currentlbl/.style={font=\fontsize{6.5}{8}\selectfont, analogdomain!65!black},
+    voltagelbl/.style={font=\fontsize{6.5}{8}\selectfont, inputdomain!65!black},
+    digitallbl/.style={font=\fontsize{6.5}{8}\selectfont, digitaldomain!35!black},
+    awire/.style={analogdomain!80!black, thick},
+    dwire/.style={digitaldomain!45!black, thick},
+    vwire/.style={inputdomain!60!black, thick},
+  ]
+
+  % ==== domain-band / domain-boundary macros (contract §1a; net-new -- opentikz
+  % has no equivalent of this analog/digital region-shading convention). Both
+  % consume the palette tokens above, never a raw hue.
+  %   \domainband{name}{color-token}{fitspec}{label}{anchor}
+  %     shaded background band for a signal domain; the label sits INSIDE it,
+  %     anchored at the band's own \anchor corner (contract: "label sits
+  %     inside it") -- drawn on the background layer so it never occludes
+  %     the components it contains. A generous inner sep reserves enough
+  %     clearance for the label's own text height (verified by rendering to
+  %     PNG -- a tight sep leaves the label's descenders touching the
+  %     nearest node, matching figstyle.tex's convention: "domain labels
+  %     live INSIDE the shaded bands, small italic, top corner").
+  %   \domainboundary{from}{to}
+  %     dashed divider between two domains, drawn between two named points.
+  \newcommand{\domainband}[5]{%
+    \begin{scope}[on background layer]
+      \node[draw=#2!55!black, fill=#2!10, rounded corners=4pt,
+            inner sep=16pt, fit=#3] (#1) {};
+    \end{scope}
+    \node[domainlbl, text=#2!70!black, anchor=#5, inner sep=3pt] at (#1.#5) {#4};
+  }
+  \newcommand{\domainboundary}[2]{%
+    \draw[digitaldomain!70!black, dashed, thick] (#1) -- (#2);
+  }
+
+  % ==== generator: nrows x ncols crossbar array (WP-4 \foreach pattern,
+  % contract §1a `crossbar-array`: "a full nrows x ncols VMM cell array,
+  % placed by row/col index") -- scaled parametrically, never hand-coded ====
+  \def\analogfitlist{}
+  \foreach \r in {1,...,\nrows} {
+    \pgfmathsetmacro{\py}{-(\r-1)*\rowgap}
+    \node[vsource] (vin-\r) at (0,\py) {\vlabelprefix$_{\r}$};
+    \xdef\analogfitlist{\analogfitlist(vin-\r)}
+    \foreach \c in {1,...,\ncols} {
+      \pgfmathsetmacro{\px}{\c*\colgap}
+      \node[cell] (cell-\r-\c) at (\px,\py) {$G_{\r,\c}$};
+      \xdef\analogfitlist{\analogfitlist(cell-\r-\c)}
+    }
+    % row rail: one draw from the voltage source through every cell in the
+    % row (all colinear at y=\py) -- O(1) edges per row, per the WP-4
+    % generator's rail convention, not O(cols) point-to-point wires.
+    \draw[vwire] (vin-\r) -- (cell-\r-\ncols);
+  }
+
+  % ==== per-column KCL summation + broadened circuitikz readout stage +
+  % ADC (contract §1a `kcl-node`, `adc`). Three DIFFERENT circuitikz device
+  % types across the three columns -- broadened coverage beyond the
+  % to[R]/to[I] pair cp-4856 exercised -- mixed with the hand-styled
+  % kclnode/cell/vsource family vocabulary, retaining the confirmed working
+  % pattern (cp-4856; ADR-0005 D4). ====
+  \pgfmathsetmacro{\kclrow}{-(\nrows-1)*\rowgap-\rowgap}
+  \def\digitalfitlist{}
+  \foreach \c/\dev/\devlabel in {1/R/$R_{\text{sense}}$, 2/C/$C_{\text{sh}}$, 3/I/$I_{\text{ref}}$} {
+    \pgfmathsetmacro{\px}{\c*\colgap}
+    \node[kclnode] (kcl-\c) at (\px,\kclrow) {$\Sigma$};
+    \xdef\analogfitlist{\analogfitlist(kcl-\c)}
+    % column rail: one draw from the top cell through every cell in the
+    % column down to its KCL node (all colinear at x=\px).
+    \draw[awire] (cell-1-\c) -- (kcl-\c);
+    \foreach \rr in {2,...,\nrows} {
+      \draw[awire] (cell-\rr-\c) -- (kcl-\c);
+    }
+
+    % real circuitikz device symbol on the readout path (the genuine
+    % EE-symbol test: the hand-styled node styles above cannot express
+    % these; only circuitikz's `to[...]` bipole syntax can) -- \readoutgap
+    % is the fix for the ported fixture's collision defect (see parameters).
+    \coordinate (dev-\c) at ($(kcl-\c)+(0,-\readoutgap)$);
+    \draw (kcl-\c) to[\dev, l=\devlabel, o-o] (dev-\c);
+    \xdef\analogfitlist{\analogfitlist(dev-\c)}
+
+    % ADC (contract §1a `adc`: analog->digital converter, apex-right
+    % triangle) -- the readout device's analog current becomes a digital
+    % word here; this is the figure's analog/digital boundary.
+    \node[adcshape] (adc-\c) at ($(dev-\c)+(0,-\adcgap)$) {ADC};
+    \draw[dwire] (dev-\c) -- (adc-\c);
+    \node[digitallbl, right=2pt of adc-\c] {$D_{\c}$};
+    \xdef\digitalfitlist{\digitalfitlist(adc-\c)}
+  }
+
+  % ==== domain bands + boundary ====
+  \domainband{analogband}{analogdomain}{\analogfitlist}{Analog domain}{north west}
+  \domainband{digitalband}{digitaldomain}{\digitalfitlist}{Digital domain}{north east}
+  \coordinate (bndL) at ($(analogband.south west)!0.5!(digitalband.north west)+(-4pt,0)$);
+  \coordinate (bndR) at ($(analogband.south east)!0.5!(digitalband.north east)+(4pt,0)$);
+  \domainboundary{bndL}{bndR}
+
+\end{tikzpicture}
+\end{document}

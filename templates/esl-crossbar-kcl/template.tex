@@ -88,8 +88,14 @@
   % ---- real circuitikz device symbols on the readout path (the genuine
   %      EE-symbol test: opentikz's generic-TikZ node styles above cannot
   %      express these; only circuitikz's `to[...]` bipole syntax can) ----
-  \coordinate (k1out) at ($(k1)+(0,-1.15)$);
-  \coordinate (k2out) at ($(k2)+(0,-1.15)$);
+  % NB the KCL-node-to-device offset was originally -1.15 (verbatim as ported
+  % from the cp-4856 PoC) -- too short for circuitikz's default bipole size,
+  % so the KCL node's circle visually overlapped the readout-device glyph in
+  % BOTH columns (confirmed by rendering to PNG; see docs/VISUAL_SELFCHECK.md
+  % "Demonstrated catch"). -1.8 is the fix, verified collision-free by render
+  % for both the resistor and current-source symbols (WP-5, ADR-0005 D4/D6).
+  \coordinate (k1out) at ($(k1)+(0,-1.8)$);
+  \coordinate (k2out) at ($(k2)+(0,-1.8)$);
   \draw (k1) to[R=$R_{\text{sense}}$, o-o] (k1out);
   \draw (k2) to[I, l=$I_{\text{ref}}$, o-o] (k2out);
 

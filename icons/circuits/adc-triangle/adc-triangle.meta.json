@@ -1,0 +1,12 @@
+{
+  "id": "adc-triangle",
+  "name": "ADC (analog-to-digital converter)",
+  "type": "icon",
+  "domain": ["circuits"],
+  "tags": ["adc", "analog-to-digital", "converter", "circuit", "digital", "esl-architecture"],
+  "author": "cp-4894 (WP-5, ADR-0005 D4)",
+  "license": "CC0-1.0",
+  "requires": ["tikz", "shapes.geometric"],
+  "preview": "adc-triangle.svg",
+  "description": "Analog-to-digital converter, drawn as a small apex-right triangle per contract §1a `adc`, filled with the digitaldomain token (its output is a digital word)."
+}

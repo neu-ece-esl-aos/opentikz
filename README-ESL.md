@@ -121,7 +121,9 @@ ESL-contract template's `edit_contract` from it — the contract stays the
 single source of truth; `edit_contract` is a **derived, mechanical view**,
 never a second place semantic decisions live (D2). It does not govern every
 template in this fork — only ones carrying the `esl-architecture` domain tag
-(`templates/esl-architecture-block/`, `templates/esl-crossbar-kcl/` today).
+(`templates/esl-architecture-block/`, `templates/esl-crossbar-kcl/`,
+`templates/esl-crossbar-array/`, `templates/esl-mpsoc-tile-array/`,
+`templates/esl-crossbar-kcl-adc/` today).
 
 | File | Role |
 |---|---|

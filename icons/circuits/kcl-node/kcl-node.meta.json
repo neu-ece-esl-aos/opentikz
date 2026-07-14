@@ -1,0 +1,12 @@
+{
+  "id": "kcl-node",
+  "name": "KCL summation node",
+  "type": "icon",
+  "domain": ["circuits"],
+  "tags": ["kcl", "kirchhoff", "summation", "current-mode", "circuit", "analog", "esl-architecture"],
+  "author": "cp-4894 (WP-5, ADR-0005 D4)",
+  "license": "CC0-1.0",
+  "requires": ["tikz", "positioning"],
+  "preview": "kcl-node.svg",
+  "description": "Summation node (KCL) collecting column current, per contract §1a `kcl-node`; carries the sigma glyph plus the always-present 'KCL' tag the contract requires. Filled with the analogdomain token (this is where analog cell currents sum)."
+}
