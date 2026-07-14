@@ -440,17 +440,30 @@ def check_edge_orthogonal_fixed(a_tok: str, b_tok: str, tracker: AxisTracker):
 @dataclass
 class Edge:
     styles: set
-    points: list  # path point tokens, in order (>= 2)
+    points: list       # path point tokens, in order (>= 2 when resolvable)
     raw: str
+    unresolved: bool = False  # path uses an inline -|/|- combinator this module doesn't model
 
 
 def parse_edges(tex: str) -> list:
+    """Every ``\\draw[style] ...;`` statement -- including ones this module
+    can't decompose into simple point tokens (an inline ``A -| B`` / ``A |- B``
+    coordinate combinator, e.g. a trunk-and-branch orthogonal router). Those
+    are returned with ``unresolved=True`` and an empty ``points`` list rather
+    than silently dropped, so a caller counting "how many <style> edges exist"
+    doesn't undercount, and a rule whose only evidence is such an edge reports
+    NEEDS_RENDER instead of a falsely confident NOT_APPLICABLE/PASS.
+    """
     edges = []
     for m in _DRAW_RE.finditer(tex):
         style = {s.strip() for s in m.group("style").split(",") if s.strip()}
-        points = _POINT_TOKEN_RE.findall(m.group("path"))
-        if len(points) >= 2:
+        path = m.group("path")
+        points = _POINT_TOKEN_RE.findall(path)
+        has_combinator = bool(re.search(r"-\||\|-", path))
+        if len(points) >= 2 and not has_combinator:
             edges.append(Edge(styles=style, points=points, raw=m.group(0)))
+        else:
+            edges.append(Edge(styles=style, points=[], raw=m.group(0), unresolved=True))
     return edges
 
 
@@ -570,9 +583,16 @@ def _arch_tile_entity(ctx: TemplateCtx):
 
 
 def _arch_member_entities(ctx: TemplateCtx):
+    # Only components the family record's own rule text names as tile
+    # members ("pe (and cpu-core / acc-core) nodes sit INSIDE their tile" --
+    # pes-inside-tiles). mem-block is deliberately EXCLUDED: the family's own
+    # shared-memory-locus rule places it OUTSIDE every tile, at one fixed
+    # locus (e.g. esl-mpsoc-memory-hierarchy's mem-block pinned above the
+    # tile row) -- requiring tile-containment for it would fail every
+    # correct instance of that separate, already-checked rule.
     return [
         e for e in ctx.intent.entities
-        if e.get("component") in ("pe", "cpu-core", "acc-core", "mem-block", "param-node")
+        if e.get("component") in ("pe", "cpu-core", "acc-core")
     ]
 
 
@@ -642,23 +662,31 @@ def _check_tile_fit_declared_after_members(ctx: TemplateCtx) -> RuleResult:
     if tile_entity is None or "node_family" in tile_entity:
         # the array generator's fit list is macro-accumulated (fit=\tilefitlist),
         # not literal text -- declaration-order is checkable structurally instead:
-        # confirm the tilebox \node[...fit=...] line appears textually after the
-        # nested pe-generation \foreach block, both inside on-background-layer.
+        # confirm the tilebox \node[...fit=...] line appears textually after
+        # every member \node declaration it fits, both inside on-background-
+        # layer. Found via the member entity's OWN node_family stem (never a
+        # hardcoded loop-variable name like \pr/\pc -- this fork's templates
+        # name their \foreach index variables differently per template, e.g.
+        # esl-mpsoc-memory-hierarchy uses \t/\k, not \pr/\pc).
         m = re.search(r"\\node\s*\[[^\]]*fit\s*=\s*\\\w+[^\]]*\]\s*\((?P<name>" + _NAME + r"+)\)", ctx.tex)
         if not m:
             return RuleResult("tile-fit-declared-after-members", NOT_APPLICABLE, "no macro-based fit box found")
         bg_spans = [(s.start(), s.end()) for s in _SCOPE_BG_RE.finditer(ctx.tex)]
         in_bg = any(start <= m.start() < end for start, end in bg_spans)
-        pe_loop_end = None
-        pe_loop = re.search(r"\\foreach\s+\\pr\b.*?\n(?:.*\n)*?\s*\}\s*\}\s*\n", ctx.tex)
-        if pe_loop:
-            pe_loop_end = pe_loop.end()
-        after_members = pe_loop_end is not None and m.start() > pe_loop_end
+        members = [e for e in _arch_member_entities(ctx) if "node_family" in e]
+        member_end = None
+        for member in members:
+            stem = member["node_family"]["stem"]
+            member_rx = re.compile(r"\\node\s*\[[^\]]*\]\s*\(" + re.escape(stem) + r"-" + _NAME + r"+\)")
+            positions = [mm.end() for mm in member_rx.finditer(ctx.tex)]
+            if positions:
+                member_end = max(member_end or 0, max(positions))
+        after_members = member_end is not None and m.start() > member_end
         if in_bg and after_members:
-            return RuleResult("tile-fit-declared-after-members", PASS, "fit box follows the PE-generation loop, on background layer")
+            return RuleResult("tile-fit-declared-after-members", PASS, "fit box follows every member's own generation loop, on background layer")
         return RuleResult(
             "tile-fit-declared-after-members", FAIL,
-            f"fit box {m.group('name')!r}: on-background-layer={in_bg}, after PE loop={after_members}",
+            f"fit box {m.group('name')!r}: on-background-layer={in_bg}, after member generation={after_members}",
         )
     results = fit_declared_after_members_and_backgrounded(ctx.tex)
     if not results:
@@ -691,6 +719,9 @@ def _orthogonality_verdicts(ctx: TemplateCtx, edges: list):
 
     verdicts = []
     for edge in edges:
+        if edge.unresolved:
+            verdicts.append((None, f"{edge.raw.strip()}: uses an inline -|/|- coordinate combinator this module doesn't model"))
+            continue
         for i in range(len(edge.points) - 1):
             a_tok, b_tok = edge.points[i], edge.points[i + 1]
             a_name, _ = strip_anchor(a_tok)
@@ -721,7 +752,12 @@ def _check_bus_scoping(ctx: TemplateCtx, style_name: str, rule_id: str, same_til
         e["nodes"][0] for e in ctx.intent.entities if "component" not in e and e.get("nodes")
     }  # e.g. the "io" hub (contract gap G1) -- exempt from tile-membership requirement
     scoping_violations = []
-    for edge in edges:
+    unresolved = [
+        f"{e.raw.strip()}: uses an inline -|/|- coordinate combinator this module doesn't model"
+        for e in edges if e.unresolved
+    ]
+    resolvable_edges = [e for e in edges if not e.unresolved]
+    for edge in resolvable_edges:
         keys = []
         skip = False
         for tok in (edge.points[0], edge.points[-1]):
@@ -733,20 +769,27 @@ def _check_bus_scoping(ctx: TemplateCtx, style_name: str, rule_id: str, same_til
         if skip:
             continue
         if any(k is None for k in keys):
-            scoping_violations.append(f"{edge.raw.strip()}: endpoint has no resolvable tile membership")
+            # An unresolved endpoint is NOT itself a scoping violation -- it's
+            # commonly a bare \coordinate helper (e.g. a routing "rail") or a
+            # legitimately tile-external entity (a mem-block/hub the family's
+            # OWN shared-memory-locus rule places outside every tile). Only a
+            # genuine same-tile/cross-tile mismatch between two RESOLVED
+            # endpoints is evidence of a violation; note the gap honestly
+            # instead of asserting one.
+            unresolved.append(f"{edge.raw.strip()}: an endpoint has no resolvable tile membership (helper coordinate or tile-external node)")
             continue
         same_tile = keys[0] == keys[1]
         if same_tile_required and not same_tile:
             scoping_violations.append(f"{edge.raw.strip()}: crosses a tile boundary (endpoints in different tiles)")
         elif not same_tile_required and same_tile:
             scoping_violations.append(f"{edge.raw.strip()}: stays within one tile (expected a cross-tile edge)")
-    ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, edges)
+    ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, resolvable_edges)
     if scoping_violations or ortho_fails:
         return RuleResult(rule_id, FAIL, "; ".join(scoping_violations + ortho_fails))
-    if ortho_unknown:
+    if ortho_unknown or unresolved:
         return RuleResult(
             rule_id, NEEDS_RENDER,
-            f"tile scoping OK for all {len(edges)} {style_name} edge(s); orthogonality unresolved: " + "; ".join(ortho_unknown),
+            f"tile scoping OK for every resolvable {style_name} edge; unresolved: " + "; ".join(unresolved + ortho_unknown),
         )
     return RuleResult(rule_id, PASS, f"all {len(edges)} {style_name} edge(s) respect tile scoping and are orthogonal")
 
@@ -774,18 +817,23 @@ def _check_ports_on_boundaries(ctx: TemplateCtx) -> RuleResult:
         stem, indices = tile_entity["node_family"]["stem"], tile_entity["node_family"]["indices"]
         tile_rx = _generated_name_regex(stem, len(indices))
     tile_names = set(_literal_nodes(tile_entity)) if tile_rx is None else set()
+    unresolved = [
+        f"{e.raw.strip()}: uses an inline -|/|- coordinate combinator this module doesn't model"
+        for e in edges if e.unresolved
+    ]
+    resolvable_edges = [e for e in edges if not e.unresolved]
     interior_hits = []
-    for edge in edges:
+    for edge in resolvable_edges:
         for tok in (edge.points[0], edge.points[-1]):
             base, anchor = strip_anchor(tok)
             is_tile = base in tile_names or (tile_rx is not None and tile_rx.match(base))
             if is_tile and anchor is None:
                 interior_hits.append(f"{edge.raw.strip()}: {tok!r} attaches to the tile's bare/center node, not a boundary anchor")
-    ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, edges)
+    ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, resolvable_edges)
     if interior_hits or ortho_fails:
         return RuleResult("ports-on-boundaries", FAIL, "; ".join(interior_hits + ortho_fails))
-    if ortho_unknown:
-        return RuleResult("ports-on-boundaries", NEEDS_RENDER, "; ".join(ortho_unknown))
+    if ortho_unknown or unresolved:
+        return RuleResult("ports-on-boundaries", NEEDS_RENDER, "; ".join(ortho_unknown + unresolved))
     return RuleResult("ports-on-boundaries", PASS, f"all {len(edges)} interbus edge(s) attach via boundary anchors and are orthogonal")
 
 
@@ -818,6 +866,8 @@ def _check_kcl_at_column_foot(ctx: TemplateCtx) -> RuleResult:
             kcl_names.add(e["node_family"]["stem"])  # prefix match below
     problems = []
     for edge in edges:
+        if edge.unresolved:
+            continue  # uses an inline -|/|- combinator this module doesn't model
         a, b = edge.points[0], edge.points[-1]
         b_base, _ = strip_anchor(b)
         is_kcl_target = b_base in kcl_names or any(b_base.startswith(stem + "-") for stem in kcl_names)
@@ -839,6 +889,13 @@ def _check_kcl_at_column_foot(ctx: TemplateCtx) -> RuleResult:
             pass  # can't evaluate (loop-var dependent) -- topology (awire terminates at kcl) already confirmed
     if problems:
         return RuleResult("kcl-at-column-foot", FAIL, "; ".join(problems))
+    skipped = sum(1 for e in edges if e.unresolved)
+    if skipped:
+        return RuleResult(
+            "kcl-at-column-foot", NEEDS_RENDER,
+            f"every resolvable awire edge into a kcl-node terminates there, below its source; "
+            f"{skipped} awire edge(s) use an inline -|/|- combinator this module doesn't model",
+        )
     return RuleResult("kcl-at-column-foot", PASS, "every awire edge into a kcl-node terminates there, below its source")
 
 

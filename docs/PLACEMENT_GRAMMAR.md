@@ -63,23 +63,45 @@ node *naming*, not which TikZ placement idiom a template's `.tex` uses):
 
 An idiom this module doesn't recognize (a third coordinate system, a
 multi-segment `-|`/`|-` route, an anchor combination not modeled) makes that
-specific comparison `NEEDS_RENDER`, never a fabricated `PASS`.
+specific comparison `NEEDS_RENDER`, never a fabricated `PASS`. Concretely:
+`parse_edges` tags any `\draw` statement using an inline `-|`/`|-` coordinate
+combinator (e.g. `esl-mpsoc-memory-hierarchy`'s orthogonal trunk-and-branch
+router: `(tile-\t.north) -- (tile-\t.north |- rail)`) as `unresolved=True`
+rather than silently dropping it from the edge count — every caller counts
+these explicitly and reports `NEEDS_RENDER`, never treats their absence of
+evidence as a passing verdict (an earlier version of this module silently
+dropped such edges entirely, which could have under-evaluated a rule down to
+a false `PASS`/`NOT_APPLICABLE` — caught and fixed against this exact
+template before landing).
 
-## Live findings (as of this PR, evaluated against `dev`)
+## Live findings (as of this PR, evaluated against `dev` @ `aea3a26`)
 
-```
-$ python3 tools/adapter/cli.py grammar templates/esl-architecture-block
-...
-FAIL   ports-on-boundaries       tile1.north -- io: neither x nor y match -- diagonal segment; ...
-FAIL   noc-spine-between-tiles   tile1.north -- io: neither x nor y match -- diagonal segment; ...
-```
-This is the pre-existing diagonal inter-bus defect (§3a primitive 5
-`typed-routing`, "orthogonal, no stray crossings") flagged in this task's
-brief — **WP-6 already fixed it** on its own unmerged `feat/arch-flow-
-template-family` branch (a `railmid`-based orthogonal trunk-and-branch
-route). This FAIL is expected until that branch merges to `dev`; it is proof
-the checker catches the exact defect it was built to catch, mechanically,
-without an agent reading the render.
+This PR was rebased once, mid-flight, onto a `dev` that had moved substantially
+(WP-5 circuit family, WP-6 architecture/flow family, and WP-8's rendered-PNG
+gate all landed). That rebase is what surfaced everything below — both the
+findings and three real bugs in this checker itself, caught by validating
+against templates that didn't exist when this module was first written:
+
+- The diagonal `esl-architecture-block` inter-bus defect this task's brief
+  flagged is **now fixed on `dev`** (WP-6's `railmid`-based orthogonal
+  trunk-and-branch route merged) — `ports-on-boundaries` /
+  `noc-spine-between-tiles` both went from `FAIL` to `PASS` across the rebase,
+  live confirmation the checker tracks real repo state rather than a fixed
+  snapshot.
+- Three checker bugs, found and fixed against `esl-mpsoc-memory-hierarchy`
+  (a template that landed after this module's first pass): (1)
+  `pes-inside-tiles`/`hierarchy-is-organizer` wrongly required the family's
+  own shared `mem-block` to be tile-contained, when `shared-memory-locus`
+  places it outside every tile by design; (2) the array-generator branch of
+  `tile-fit-declared-after-members` hardcoded `esl-mpsoc-tile-array`'s `\pr`
+  loop-variable name instead of reading it from the member entity's own
+  `node_family` indices, so it silently didn't generalize to this template's
+  `\t`/`\k` naming; (3) `noc-spine-between-tiles`'s tile-scoping check treated
+  *any* unresolvable endpoint (a bare routing `\coordinate` like `rail`, or
+  the shared `mem-block` itself) as a scoping violation, when an endpoint
+  that isn't tile-scoped at all can't meaningfully be judged same-tile/
+  cross-tile — fixed to report it as `NEEDS_RENDER` evidence instead of a
+  fabricated `FAIL`.
 
 ```
 $ python3 tools/adapter/cli.py grammar templates/esl-crossbar-kcl
@@ -90,12 +112,27 @@ FAIL   analog-digital-split   template's thesis/entities reference an analog/dig
 ```
 `esl-crossbar-kcl`'s thesis is explicitly about the analog accumulation vs.
 the digital readout, but the template draws no `\domainband`/`\domainboundary`
-(WP-5's `esl-crossbar-kcl-adc` branch adds the domain-band to a *separate*,
-richer template — not to this simple 2×2 fixture). Whether this simple
-fixture is exempt from the family's `analog-digital-split` rule, or should
-also carry a domain-band, is a genuine grammar-vs-template disagreement —
-reported to cp-4883 rather than silently resolved either way (see this
-task's PR description).
+(WP-5's `esl-crossbar-kcl-adc` adds the domain-band to a *separate*, richer
+template — not to this simple 2×2 fixture). Whether this simple fixture is
+exempt from the family's `analog-digital-split` rule, or should also carry a
+domain-band, is a genuine grammar-vs-template disagreement — reported to
+cp-4883 rather than silently resolved either way. This is the **only**
+finding left across all 8 ESL templates as of this PR.
+
+## Known gap: no `flow`-family checkers registered yet
+
+`FAMILY_CHECKERS["flow"]` is empty — WP-6's `esl-flow-pipeline` and
+`esl-sequence-timeline` are the first flow-family templates to exist in this
+fork, landing after this module's checker set was designed against the
+circuit-schematic/architecture families only. Every flow `placement_grammar`
+rule therefore reports `NEEDS_RENDER` (`no static checker implemented`) for
+both templates — honest (no false `PASS`), but the least amount of automated
+coverage in this PR. `params-off-axis` and `monotone-stage-direction` look
+tractable with this module's existing coordinate models (`param-out`'s
+`below=of stage-\nstages` positioning idiom vs. the stage row's `at(\sx,0)`
+generated idiom, respectively) but need a cross-model "prove different" (not
+just "prove same") comparison this module doesn't have yet — flagged as
+follow-up rather than rushed.
 
 ## The six §3a primitives, realized natively in TikZ (never a seventh)
 

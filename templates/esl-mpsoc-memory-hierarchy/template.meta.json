@@ -32,7 +32,20 @@
     "invariants": [
       "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
       "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-      "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
+      "hierarchy-is-organizer: explicit HIERARCHY/containment is the organizing primitive — tile ⊃ (pe | cpu-core | acc-core | mem-block); state the nesting explicitly so it is checkable and transfers to a nested-graph backend (ELK subgraphs, draw.io containers).",
+      "tiles-on-a-grid: tile containers are laid out on a regular grid (rows x columns), uniform size and gap; the grid is anchored once and every other tile placed relationally off it.",
+      "pes-inside-tiles: pe (and cpu-core / acc-core) nodes sit INSIDE their tile via the tile's fit/opts; a PE never floats outside the tile it belongs to.",
+      "tile-fit-declared-after-members: a tile's boundary fit node is declared AFTER every node it fits, inside an `on background layer` scope, so the tile box renders behind its members rather than occluding them.",
+      "ports-on-boundaries: buses attach at PORTS pinned on the tile/block BOUNDARY at the connection point; an inter-bus/NoC edge attaches to a tile's boundary port, never to a PE interior, and routes orthogonally from there.",
+      "intra-bus-stays-in-tile: intra-bus edges are SHORT and orthogonal, connecting PEs/mem within ONE tile only; they never cross a tile boundary.",
+      "noc-spine-between-tiles: the NoC / inter-bus is routed ORTHOGONALLY along the gaps between tile edges (a spine/mesh between tiles), connecting tile boundary ports, not PE interiors.",
+      "shared-memory-locus: shared-memory (mem-block) sits at ONE consistent locus across the set (e.g. a central spine or a fixed edge), the same place in every figure of the family.",
+      "legend-corner-groupbox: the legend is a group-box in a fixed corner, outside the tile grid; it never overlaps tiles or the NoC spine.",
+      "bus-color-split: intra-bus = Orange, inter-bus/NoC = NavyBlue (contract §2 tokens); consistent.",
+      "bus-dash-split: the inter-tile bus is ALWAYS dashed and the intra-tile bus is ALWAYS solid — this distinction is load-bearing (NoC/global vs. local/tile-internal traffic), independent of and in addition to the color split above.",
+      "core-accents: cpu-core = Aquamarine fill, acc-core = ForestGreen fill; PEs a light green.",
+      "palette-additive-not-remapped: the ESL domain-semantic tokens (core-accent/process-accent/param-accent/ intra-bus/inter-bus) are ADDITIVE to opentikz's five ot* names — never remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.",
+      "containment-is-membership: a node drawn inside a tile IS a member of that tile; no purely decorative nesting."
     ]
   }
 }
