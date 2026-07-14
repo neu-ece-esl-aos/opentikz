@@ -59,31 +59,42 @@
   ]
 
   % ---- row voltage sources (analog input activations) ----
-  \node[vsource] (v1) at (0, 0)          {\vinonelabel};
-  \node[vsource] (v2) at (0, -\rowgap)   {\vintwolabel};
+  \node[vsource] (vin-1) at (0, 0)          {\vinonelabel};
+  \node[vsource] (vin-2) at (0, -\rowgap)   {\vintwolabel};
 
   % ---- crossbar weight cells: 2 rows x 2 cols ----
-  \node[cell] (g11) at (\colgap, 0)          {$G_{1,1}$};
-  \node[cell] (g21) at (\colgap, -\rowgap)   {$G_{2,1}$};
-  \node[cell] (g12) at (2*\colgap, 0)        {$G_{1,2}$};
-  \node[cell] (g22) at (2*\colgap, -\rowgap) {$G_{2,2}$};
+  % Node identifiers are dash-separated <stem>-<row>[-<col>] (cp-4883
+  % family-wide naming ruling, C8) -- NOT concatenated-digit "g11"/"v1"/"k1"
+  % style, which is ambiguous at index >= 10 ("g111" = row1/col11 or
+  % row11/col1?) and structurally broken at the scales D5 exists to reach.
+  % This 2x2 fixture is hand-instantiated (fixed shape, not
+  % \foreach-generated), so its node names stay a literal enumeration in
+  % intent.yaml (`nodes: [...]`), but the identifier *pattern* -- vin-<row>,
+  % cell-<row>-<col>, kcl-<col>, dev-<col> -- must still match the family-wide
+  % dash-separated scheme esl-crossbar-array/esl-crossbar-kcl-adc already use.
+  % The rendered LaTeX labels ($G_{1,1}$ etc.) are unaffected -- only the
+  % TikZ node names changed.
+  \node[cell] (cell-1-1) at (\colgap, 0)          {$G_{1,1}$};
+  \node[cell] (cell-2-1) at (\colgap, -\rowgap)   {$G_{2,1}$};
+  \node[cell] (cell-1-2) at (2*\colgap, 0)        {$G_{1,2}$};
+  \node[cell] (cell-2-2) at (2*\colgap, -\rowgap) {$G_{2,2}$};
 
-  \draw[vwire] (v1) -- (g11);
-  \draw[vwire] (v1) -- (g12);
-  \draw[vwire] (v2) -- (g21);
-  \draw[vwire] (v2) -- (g22);
+  \draw[vwire] (vin-1) -- (cell-1-1);
+  \draw[vwire] (vin-1) -- (cell-1-2);
+  \draw[vwire] (vin-2) -- (cell-2-1);
+  \draw[vwire] (vin-2) -- (cell-2-2);
 
   % ---- per-column KCL summation nodes ----
-  \node[kclnode] (k1) at (\colgap, -2*\rowgap-0.4)   {\kcllabel};
-  \node[kclnode] (k2) at (2*\colgap, -2*\rowgap-0.4) {\kcllabel};
+  \node[kclnode] (kcl-1) at (\colgap, -2*\rowgap-0.4)   {\kcllabel};
+  \node[kclnode] (kcl-2) at (2*\colgap, -2*\rowgap-0.4) {\kcllabel};
 
-  \draw[awire] (g11) -- (k1);
-  \draw[awire] (g21) -- (k1);
-  \draw[awire] (g12) -- (k2);
-  \draw[awire] (g22) -- (k2);
+  \draw[awire] (cell-1-1) -- (kcl-1);
+  \draw[awire] (cell-2-1) -- (kcl-1);
+  \draw[awire] (cell-1-2) -- (kcl-2);
+  \draw[awire] (cell-2-2) -- (kcl-2);
 
-  \node[currentlbl, left=1pt of k1.west, xshift=-2pt] {$I_{1,1}{+}I_{2,1}$};
-  \node[currentlbl, right=1pt of k2.east, xshift=2pt] {$I_{1,2}{+}I_{2,2}$};
+  \node[currentlbl, left=1pt of kcl-1.west, xshift=-2pt] {$I_{1,1}{+}I_{2,1}$};
+  \node[currentlbl, right=1pt of kcl-2.east, xshift=2pt] {$I_{1,2}{+}I_{2,2}$};
 
   % ---- real circuitikz device symbols on the readout path (the genuine
   %      EE-symbol test: opentikz's generic-TikZ node styles above cannot
@@ -94,16 +105,16 @@
   % BOTH columns (confirmed by rendering to PNG; see docs/VISUAL_SELFCHECK.md
   % "Demonstrated catch"). -1.8 is the fix, verified collision-free by render
   % for both the resistor and current-source symbols (WP-5, ADR-0005 D4/D6).
-  \coordinate (k1out) at ($(k1)+(0,-1.8)$);
-  \coordinate (k2out) at ($(k2)+(0,-1.8)$);
-  \draw (k1) to[R=$R_{\text{sense}}$, o-o] (k1out);
-  \draw (k2) to[I, l=$I_{\text{ref}}$, o-o] (k2out);
+  \coordinate (dev-1) at ($(kcl-1)+(0,-1.8)$);
+  \coordinate (dev-2) at ($(kcl-2)+(0,-1.8)$);
+  \draw (kcl-1) to[R=$R_{\text{sense}}$, o-o] (dev-1);
+  \draw (kcl-2) to[I, l=$I_{\text{ref}}$, o-o] (dev-2);
 
-  \node[sidenote, below=2pt of k1out, xshift=-9pt] {col.\,1 readout};
-  \node[sidenote, below=2pt of k2out, xshift=9pt] {col.\,2 readout};
+  \node[sidenote, below=2pt of dev-1, xshift=-9pt] {col.\,1 readout};
+  \node[sidenote, below=2pt of dev-2, xshift=9pt] {col.\,2 readout};
 
-  \node[domainlbl, inputdomain!65!black, above=6pt of v1] {Analog domain};
-  \node[currentlbl, right=4pt of k2out] {\outcollabel};
+  \node[domainlbl, inputdomain!65!black, above=6pt of vin-1] {Analog domain};
+  \node[currentlbl, right=4pt of dev-2] {\outcollabel};
 
 \end{tikzpicture}
 \end{document}

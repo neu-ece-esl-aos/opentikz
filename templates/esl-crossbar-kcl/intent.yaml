@@ -26,15 +26,15 @@ entities:
   - name: row voltage sources
     role: analog input activations driving each row
     component: v-source
-    nodes: [v1, v2]
+    nodes: [vin-1, vin-2]
   - name: crossbar weight cells
     role: the 2x2 VMM weight-cell array
     component: crossbar-cell
-    nodes: [g11, g21, g12, g22]
+    nodes: [cell-1-1, cell-2-1, cell-1-2, cell-2-2]
   - name: per-column KCL summation node
     role: physical node collecting a column's analog current
     component: kcl-node
-    nodes: [k1, k2]
+    nodes: [kcl-1, kcl-2]
   - name: readout-device branch
     role: >-
       the real circuitikz device symbol (sense resistor / reference current
@@ -43,7 +43,7 @@ entities:
       raw EE device primitives (resistor/current-source); these are treated
       as backend-private circuitikz realization detail (contract §5), not a
       missing §1 component, so no `component:` mapping is claimed here.
-    nodes: [k1out, k2out]
+    nodes: [dev-1, dev-2]
 
 relationships:
   - from: row voltage sources

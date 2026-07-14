@@ -2497,7 +2497,7 @@
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
         "(seam: no WP-7 family settled-decisions record yet for family 'circuit-schematic'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "v-source: (v1, v2); crossbar-cell: (g11, g21, g12, g22); kcl-node: (k1, k2)",
+      "node_naming": "v-source: (vin-1, vin-2); crossbar-cell: (cell-1-1, cell-2-1, cell-1-2, cell-2-2); kcl-node: (kcl-1, kcl-2)",
       "operations": [
         {
           "id": "rename-label",
@@ -2505,15 +2505,15 @@
         },
         {
           "id": "add-row",
-          "summary": "add \\node[vsource] (v3) at (0,-2*\\rowgap) {...}; add a \\node[cell] (g3<c>) per existing column at the same x as g1<c>/g2<c>, y=-2*\\rowgap; wire \\draw[vwire] (v3) -- (g3<c>); and \\draw[awire] (g3<c>) -- (k<c>); for every column"
+          "summary": "add \\node[vsource] (vin-3) at (0,-2*\\rowgap) {...}; add a \\node[cell] (cell-3-<c>) per existing column at the same x as cell-1-<c>/cell-2-<c>, y=-2*\\rowgap; wire \\draw[vwire] (vin-3) -- (cell-3-<c>); and \\draw[awire] (cell-3-<c>) -- (kcl-<c>); for every column -- node identifiers stay dash-separated vin-<row>/cell-<row>-<col>/kcl-<col> (cp-4883 family-wide naming ruling, C8), never concatenated-digit"
         },
         {
           "id": "add-column",
-          "summary": "add a \\node[cell] (g<r>3) per existing row at x=3*\\colgap; wire \\draw[vwire] (v<r>) -- (g<r>3); add a \\node[kclnode] (k3) below the new column; wire every \\draw[awire] (g<r>3) -- (k3); and its readout branch (see add-readout-device)"
+          "summary": "add a \\node[cell] (cell-<r>-3) per existing row at x=3*\\colgap; wire \\draw[vwire] (vin-<r>) -- (cell-<r>-3); add a \\node[kclnode] (kcl-3) below the new column; wire every \\draw[awire] (cell-<r>-3) -- (kcl-3); and its readout branch (see add-readout-device) -- node identifiers stay dash-separated cell-<row>-<col>/kcl-<col> (cp-4883 family-wide naming ruling, C8), never concatenated-digit"
         },
         {
           "id": "add-readout-device",
-          "summary": "declare \\coordinate (k<c>out) at ($(k<c>)+(0,-1.8)$); then \\draw (k<c>) to[<device>, l=$<label>$, o-o] (k<c>out); -- <device> is a real circuitikz bipole key (R, I, C, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes. -1.8 is the minimum offset verified collision-free by rendering to PNG (WP-5 fix for the original -1.15, which visually overlapped the KCL node) -- never shrink it back without re-verifying from a render"
+          "summary": "declare \\coordinate (dev-<c>) at ($(kcl-<c>)+(0,-1.8)$); then \\draw (kcl-<c>) to[<device>, l=$<label>$, o-o] (dev-<c>); -- <device> is a real circuitikz bipole key (R, I, C, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes. -1.8 is the minimum offset verified collision-free by rendering to PNG (WP-5 fix for the original -1.15, which visually overlapped the KCL node) -- never shrink it back without re-verifying from a render"
         },
         {
           "id": "recolor-role",
