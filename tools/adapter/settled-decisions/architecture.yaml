@@ -1,0 +1,118 @@
+# Family settled-decisions record — architecture (WP-7, ADR-0005 D3 §3/§3b rows)
+#
+# Lives ABOVE opentikz, owned by the backend-adapter (ADR-0005 D2) — never
+# widen edit_contract's schema to carry this. tools/adapter/derive.py's
+# load_settled_decisions()/derive_invariants() project this record's
+# placement_grammar[].rule / style_decisions[].decision /
+# semantic_decisions[].decision entries into every architecture template's
+# derived edit_contract.invariants automatically; re-derivability is
+# enforced by tools/adapter/checks.py in the verify loop (drift -> FAIL).
+#
+# Schema: contract backend-contract-v1.2.0.md §3b (field-for-field — do not
+# add fields beyond family/version/placement_grammar/style_decisions/
+# semantic_decisions/constraints).
+#
+# Content provenance: transcribed from the Phase-1 seed (academic.wfp
+# settled-decisions-template.md "Worked example — architecture family"),
+# survey-grounded (cp-4870). See tools/adapter/settled-decisions/README.md
+# for why this lands here (WP-7's seam, not WP-2's).
+
+family: architecture
+version: 1.3.0
+# 1.2.0 -> 1.3.0 (WP-7, cp-4896): folded in the family-wide rule the
+# esl-architecture-block cp-4856 fixture shipped as a HAND-AUTHORED
+# edit_contract.invariant before WP-2's adapter mechanized `invariants` and
+# dropped it (git ffcf370) — the inter-/intra-bus dash/solid split was
+# stated only for that one template because there was nowhere else to put
+# it; it is a family-wide rule. Also added the fit-declared-after-members
+# containment rule as first-class placement_grammar (it was invariant prose
+# on one template; the contract's own §3b box already models "declared
+# after all nodes it fits, inside on background layer" as a containment
+# realization, contract §3a row 2). Contract §3 re-check rule: this version
+# bump forces re-derivation of every architecture template's edit_contract
+# (esl-architecture-block, esl-mpsoc-tile-array) before the change counts
+# as done.
+
+placement_grammar:    # MPSoC tile+NoC — checkable relationship rules over named components,
+                      # each tagged with the §3a generic primitive(s) it instantiates
+  - id: hierarchy-is-organizer
+    primitives: [containment]
+    rule: explicit HIERARCHY/containment is the organizing primitive — tile ⊃ (pe | cpu-core |
+          acc-core | mem-block); state the nesting explicitly so it is checkable and transfers
+          to a nested-graph backend (ELK subgraphs, draw.io containers).
+    rationale: Containment is the standard block-layout organizer (yFiles hierarchical/nested,
+               ALIGN recursive blocks); leaving it implicit lets flat placement drift.
+  - id: tiles-on-a-grid
+    primitives: [alignment-symmetry, relative-placement]
+    rule: tile containers are laid out on a regular grid (rows x columns), uniform size and
+          gap; the grid is anchored once and every other tile placed relationally off it.
+    rationale: A regular tile grid is the visual invariant of a tiled MPSoC.
+  - id: pes-inside-tiles
+    primitives: [containment]
+    rule: pe (and cpu-core / acc-core) nodes sit INSIDE their tile via the tile's fit/opts;
+          a PE never floats outside the tile it belongs to.
+    rationale: Containment = "this PE is in this tile"; a stray PE breaks the hierarchy.
+  - id: tile-fit-declared-after-members
+    primitives: [containment]
+    rule: a tile's boundary fit node is declared AFTER every node it fits, inside an
+          `on background layer` scope, so the tile box renders behind its members rather
+          than occluding them.
+    rationale: Folded in from the esl-architecture-block cp-4856 PoC invariant (git ffcf370)
+               — declaration order + layer scope is a checkable, family-wide containment
+               realization detail (contract §3a row 2's TikZ idiom — `fit` + `backgrounds`),
+               not specific to one template.
+  - id: ports-on-boundaries
+    primitives: [pinned-axis, typed-routing]
+    rule: buses attach at PORTS pinned on the tile/block BOUNDARY at the connection point;
+          an inter-bus/NoC edge attaches to a tile's boundary port, never to a PE interior,
+          and routes orthogonally from there.
+    rationale: Boundary ports are what make hardware block diagrams readable (KIELER/ELK
+               port-constraint layout); attaching to interiors hides the interface.
+  - id: intra-bus-stays-in-tile
+    primitives: [typed-routing, containment]
+    rule: intra-bus edges are SHORT and orthogonal, connecting PEs/mem within ONE tile only;
+          they never cross a tile boundary.
+    rationale: Intra vs inter interconnect is a first-class distinction (color + scope).
+  - id: noc-spine-between-tiles
+    primitives: [typed-routing]
+    rule: the NoC / inter-bus is routed ORTHOGONALLY along the gaps between tile edges (a
+          spine/mesh between tiles), connecting tile boundary ports, not PE interiors.
+    rationale: The NoC is the inter-tile fabric; routing it through tiles hides the topology.
+  - id: shared-memory-locus
+    primitives: [pinned-axis, relative-placement]
+    rule: shared-memory (mem-block) sits at ONE consistent locus across the set (e.g. a
+          central spine or a fixed edge), the same place in every figure of the family.
+    rationale: A moving shared-memory locus makes figures in one set read as different systems.
+  - id: legend-corner-groupbox
+    primitives: [relative-placement]
+    rule: the legend is a group-box in a fixed corner, outside the tile grid; it never
+          overlaps tiles or the NoC spine.
+    rationale: Legends are meta; overlapping content corrupts both.
+
+style_decisions:
+  - id: bus-color-split
+    decision: intra-bus = Orange, inter-bus/NoC = NavyBlue (contract §2 tokens); consistent.
+    rationale: Color is the fast read for intra- vs inter-tile traffic.
+  - id: bus-dash-split
+    decision: the inter-tile bus is ALWAYS dashed and the intra-tile bus is ALWAYS solid —
+              this distinction is load-bearing (NoC/global vs. local/tile-internal traffic),
+              independent of and in addition to the color split above.
+    rationale: Folded in from the esl-architecture-block cp-4856 PoC invariant (git ffcf370),
+               grafted from tikzsetup.tex's intrabus/interbus split — stated only for that one
+               template because there was nowhere else to put it until this record landed.
+  - id: core-accents
+    decision: cpu-core = Aquamarine fill, acc-core = ForestGreen fill; PEs a light green.
+    rationale: Core kind is legible without a label.
+  - id: palette-additive-not-remapped
+    decision: the ESL domain-semantic tokens (core-accent/process-accent/param-accent/
+              intra-bus/inter-bus) are ADDITIVE to opentikz's five ot* names — never
+              remapped onto or aliased through otblue/otorange/otteal/otpurple/otgray.
+    rationale: ADR-0005 D7 palette resolution — collapsing the semantic tokens onto the
+               five-name scheme would erase the domain read the tokens exist to carry.
+
+semantic_decisions:
+  - id: containment-is-membership
+    decision: a node drawn inside a tile IS a member of that tile; no purely decorative nesting.
+    rationale: Containment carries meaning; don't nest for looks.
+
+constraints: []

@@ -6,7 +6,7 @@ rides the existing, unedited ``ci.yml`` invocation).
 Scope: only templates carrying the ``esl-architecture`` domain tag are
 adapter-governed (ADR-0005 Phase 2b builds the ESL figure-authoring contract's
 backend #2 — it does not retrofit every template this fork inherited from
-upstream opentikz). Three checks run for each ESL-contract template that ships
+upstream opentikz). Four checks run for each ESL-contract template that ships
 an ``edit_contract``:
 
 1. **Re-derivability** — the checked-in ``edit_contract`` must equal what the
@@ -17,6 +17,13 @@ an ``edit_contract``:
    ``component`` must be a real contract §1 vocabulary id.
 3. **Master-header <-> sidecar match** — the ``template.tex`` header comment
    block's subject/thesis/provenance must match the sidecar intent record.
+4. **Placement-grammar** (WP-7, ADR-0005 D3 §3b row) — every family
+   ``placement_grammar`` rule that ``placement_grammar.py`` can prove
+   statically must hold; only a proven ``FAIL`` blocks here — a rule this
+   fork can't check from source alone (``NEEDS_RENDER``) is intentionally
+   NOT a validate.py failure (see ``tools/adapter/cli.py grammar`` /
+   ``tools/ci/placement-grammar-report.sh`` for the full per-rule verdict
+   breakdown, including what's routed to WP-8's rendered-PNG gate).
 """
 from __future__ import annotations
 
@@ -31,6 +38,7 @@ from .intent import (
     load_intent_record,
     master_header_matches_intent,
 )
+from .placement_grammar import placement_grammar_problems
 
 _DERIVED_FIELDS = ("node_naming", "styles", "parameters", "invariants")
 
@@ -110,5 +118,8 @@ def adapter_problems(meta: dict, tex: Path, template_dir: Path, contract: Contra
     # --- check 3: master-header <-> sidecar match ----------------------- #
     header = extract_master_header(tex_text)
     problems.extend(f"{tex}: {p}" for p in master_header_matches_intent(header, intent))
+
+    # --- check 4: placement-grammar (WP-7) ------------------------------ #
+    problems.extend(placement_grammar_problems(tex_text, intent, settled_decisions, tex_path=tex))
 
     return problems

@@ -68,9 +68,10 @@ touches a file under `.github/workflows/` — so a commit that edits the
 workflow file cannot land without an operator manually running
 `gh auth refresh -s workflow` (interactive, browser-based; not something an
 agent can do on the operator's behalf). Since several later work packages land
-CI logic (WP-3 palette-drift check, WP-8 render/PNG self-check gate, WP-9
-conformance test), routing all of it through the workflow file would hit this
-wall repeatedly. Two ways around it, in priority order:
+CI logic (WP-3 palette-drift check, WP-7 placement-grammar gate, WP-8
+render/PNG self-check gate, WP-9 conformance test), routing all of it through
+the workflow file would hit this wall repeatedly. Two ways around it, in
+priority order:
 
 1. **Fold the check into `tools/validate.py` (or a module it imports) whenever
    it can run alongside an already-existing CI invocation.** The unedited,

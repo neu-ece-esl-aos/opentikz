@@ -1,0 +1,174 @@
+# Family settled-decisions record — circuit-schematic (WP-7, ADR-0005 D3 §3/§3b rows)
+#
+# Lives ABOVE opentikz, owned by the backend-adapter (ADR-0005 D2) — never
+# widen edit_contract's schema to carry this. tools/adapter/derive.py's
+# load_settled_decisions()/derive_invariants() project this record's
+# placement_grammar[].rule / style_decisions[].decision /
+# semantic_decisions[].decision entries into every circuit-schematic
+# template's derived edit_contract.invariants automatically; re-derivability
+# is enforced by tools/adapter/checks.py in the verify loop (drift -> FAIL).
+#
+# Schema: contract backend-contract-v1.2.0.md §3b (field-for-field — do not
+# add fields beyond family/version/placement_grammar/style_decisions/
+# semantic_decisions/constraints; that is the adapter's schema boundary, not
+# opentikz's).
+#
+# Content provenance: transcribed verbatim from the Phase-1 seed
+# (academic.wfp settled-decisions-template.md "Worked example —
+# circuit-schematic family"), which is survey-grounded (cp-4870) and settled
+# 2026-07-13. See tools/adapter/settled-decisions/README.md for why this
+# lands here (WP-7's seam, not WP-2's).
+
+family: circuit-schematic
+version: 1.3.0
+# 1.2.0 -> 1.3.0 (WP-7, cp-4896): folded in the family-wide rules the two
+# cp-4856 fixtures shipped as HAND-AUTHORED edit_contract.invariants before
+# WP-2's adapter mechanized `invariants` and dropped them (they had nowhere
+# else to live) — see tools/adapter/settled-decisions/README.md and git
+# ffcf370 for the original text. Contract §3 re-check rule: this version bump
+# forces re-derivation of every circuit-schematic template's edit_contract
+# (esl-crossbar-kcl, esl-crossbar-array) before the change counts as done.
+
+placement_grammar:    # analog placement — checkable relationship rules over named components,
+                      # each tagged with the §3a generic primitive(s) it instantiates.
+                      # The VMM/crossbar rules are the concrete ESL instance; the substructure/
+                      # symmetry/orientation/rail/signal-flow rules generalize beyond it.
+  # --- generic analog-placement primitives (survey-grounded, apply to any analog schematic) ---
+  - id: substructure-recognition
+    primitives: [containment]
+    rule: recognize known analog SUBSTRUCTURES (current mirror, differential pair, cascode)
+          as the placement UNIT and place them as a block, not transistor-by-transistor; the
+          VMM crossbar-array is this family's concrete ESL substructure. Place blocks first,
+          refine within.
+    rationale: Building-block-first placement is the field consensus (ALIGN, EEschematic,
+               RL-building-block); transistor-at-a-time placement loses the topology.
+  - id: symmetry-axis
+    primitives: [alignment-symmetry]
+    rule: matched/paired devices (a differential pair, mirrored current sources, a symmetric
+          crossbar) are placed SYMMETRICALLY across a shared axis (usually vertical).
+    rationale: Symmetry is a load-bearing analog-placement semantic; a broken axis reads as a
+               mismatched pair (ALIGN/ASP-DAC symmetry annotation).
+  - id: device-orientation
+    primitives: [relative-placement]
+    rule: device ORIENTATION (rotation/flip) is part of placement, not just position —
+          orient devices so pins face their connection and mirror matched devices about the
+          symmetry axis.
+    rationale: EEschematic treats rotation/flip as first-class; wrong orientation forces
+               wire crossings even when positions are right.
+  - id: power-ground-rails
+    primitives: [pinned-axis]
+    rule: the power/supply rail is PINNED at the top and the ground rail PINNED at the bottom;
+          rails are placed/connected FIRST (VDD, GND net priority before signal nets).
+    rationale: EEschematic's VDD/GND-first net priority; pinned rails give every schematic a
+               stable vertical frame the reader relies on.
+  - id: signal-flow-direction
+    primitives: [direction-axis]
+    rule: signal flows LEFT->RIGHT — primary inputs enter at the left, outputs exit at the
+          right; place stages along that axis.
+    rationale: Signal-flow direction is inferred from connectivity in every analog-layout tool;
+               a right->left datapath inverts the reading order.
+  # --- VMM/crossbar concrete instance (this chapter family) ---
+  - id: rows-are-inputs
+    primitives: [direction-axis, relative-placement]
+    rule: crossbar-cell rows run HORIZONTAL; each row is one activation/input line driven
+          from a v-source at the row's left end (rows left->right, row index increases
+          downward).
+    rationale: A vertical input line reads as a column and inverts the matrix-vector shape.
+  - id: cols-are-weights
+    primitives: [relative-placement, alignment-symmetry]
+    rule: crossbar-cell columns run VERTICAL; a column is a weight-cell stack sharing one
+          bitline (column index increases left->right). Use crossbar-array for the grid.
+    rationale: Rows=inputs x columns=weights is the whole VMM; swapping them is wrong.
+  - id: current-sums-downward
+    primitives: [direction-axis, relative-placement]
+    rule: per-column current flows DOWNWARD and accumulates; each column wire below cell
+          (r,c) carries the running sum I_{1,c}+..+I_{r,c} (label it on the segment).
+    rationale: The running-sum labels make "column = dot-product" legible on the render.
+  - id: kcl-at-column-foot
+    primitives: [relative-placement]
+    rule: each column terminates in exactly one kcl-node at the column FOOT (below the last
+          cell), tagged "KCL"; the column current sums into it.
+    rationale: The sum is a physical KCL node, not a bare Sigma glyph (semantic decision below).
+  - id: adc-below-kcl
+    primitives: [relative-placement, direction-axis]
+    rule: the adc sits BELOW the kcl-node row (analog current in from the top apex-side,
+          digital word out the far side); never above or beside the summation.
+    rationale: Fixes the analog->digital crossing point at the ADC, after summation.
+  - id: analog-digital-split
+    primitives: [containment, direction-axis]
+    rule: the analog/digital split is carried by a domain-band + one dashed domain-boundary;
+          the digital region sits BELOW/AFTER the ADC, the analog accumulation above it.
+    rationale: Band+boundary carry the split (style below); placement must not contradict it.
+
+style_decisions:
+  - id: body-font
+    decision: Fonts match the chapter body — newtx Times text + math.
+    rationale: Never Computer Modern / mathptmx; figures must read as part of the body.
+  - id: show-dont-tell
+    decision: No equation/annotation callout boxes in the figure; equations live in \caption.
+    rationale: Role labels ("column current", "KCL", "DAC") OK; narrative text is not.
+  - id: domain-labels-inside-bands
+    decision: Domain labels sit INSIDE the shaded bands (small italic, top corner).
+    rationale: Bands + a dashed boundary carry the split; no duplicate "analog|digital" text.
+  - id: comma-subscripts
+    decision: Two-index subscripts are comma-separated, row then column — G_{i,j}, I_{1,j}.
+    rationale: Device-name subscripts exempt (V_{GS}, V_{DD}, I_D stay as-is).
+  - id: concrete-indices
+    decision: Arrays use concrete indices (G_{2,2}), no generic highlighted exemplar cell.
+    rationale: Settled in review; the old highlighted G_{i,j} cell was removed.
+  - id: typed-wires
+    decision: Wire color encodes domain — orange=analog current (awire), gray=digital word
+              (dwire), blue=input voltage (vwire) — the token->role binding is reserved and
+              never swapped across the analog/digital or voltage/current domain boundary
+              (e.g. awire never carries a v-source-to-cell edge, vwire never carries a
+              cell-to-KCL edge). Stealth arrowheads everywhere.
+    rationale: awire/dwire/vwire styles carry the domain read at a glance (cp-4856 PoC
+               invariant, folded in here so it is a family-wide rule, not scoped to one
+               template — see settled-decisions/README.md).
+  - id: circuitikz-bipole-reservation
+    decision: circuitikz `to[...]` bipoles are reserved for real EE devices (resistor,
+              current/voltage source, capacitor, etc.); crossbar cells, KCL nodes, and
+              voltage-source glyphs stay the hand-styled figstyle-derived node styles
+              (cell/kclnode/vsource) — never redraw a cell as a circuitikz bipole, and never
+              redraw a real device as a plain hand-styled node. Mixing the two idioms in one
+              figure is intentional and must stay legible (label each readout branch).
+    rationale: Folded in from the esl-crossbar-kcl cp-4856 PoC invariant (git ffcf370) — this
+               is the genuine EE-symbol test opentikz's generic node styles cannot express by
+               themselves; it is a family-wide idiom choice, not specific to one template.
+  - id: kcl-current-label-clearance
+    decision: every KCL node has a labeled incoming-current annotation (currentlbl) placed
+              clear of neighboring columns.
+    rationale: Folded in from the esl-crossbar-kcl cp-4856 PoC invariant — the primary
+               render-catchable failure mode this family hit (two colliding label pairs
+               compiled cleanly and were only caught by rendering to PNG). NOTE this decision
+               is stated so it CAN be checked against a render, but "clear of neighboring
+               columns" is a rendered-glyph-position fact — WP-7's static grammar checker
+               cannot verify label clearance from source alone; route to WP-8's visual
+               self-check gate (render_selfcheck.py text-overlap detection / manual PNG read).
+  - id: palette-additive-not-remapped
+    decision: the ESL domain-semantic tokens (inputdomain/weightdomain/digitaldomain/
+              analogdomain) are ADDITIVE to opentikz's five ot* names — never remapped onto
+              or aliased through otblue/otorange/otteal/otpurple/otgray.
+    rationale: ADR-0005 D7 palette resolution — collapsing the semantic tokens onto the
+               five-name scheme would erase the domain read the tokens exist to carry.
+
+semantic_decisions:
+  - id: kcl-not-sigma-glyph
+    decision: Column sum is a KCL node (joined lines + a small "KCL" tag), not a bare Sigma.
+    rationale: Every summation carries a KCL tag; the sum is a physical node.
+  - id: xw-is-digital-logic
+    decision: x_i . w_{i,j} is a digital multiply (XNOR for +-1, AND for 0/1); the product
+              gates a per-cell current source labeled DAC — signal is analog ONLY after the DAC.
+    rationale: Bankman 2019, Seo 2022; misdrawing this inverts the mixed-signal story.
+  - id: running-column-sums
+    decision: Column wires carry running sums — below (1,1) is I_{1,1}; below (2,1) is
+              I_{1,1}+I_{2,1}; the KCL yields I_j.
+    rationale: Label what actually flows on each wire segment.
+  - id: adcbuffer-is-zoomin
+    decision: adcbuffer is the zoom-in of the Sigma+ADC stage of mixed-signal-mac; keep aligned.
+    rationale: The two figures must tell one consistent story.
+
+constraints:
+  - id: no-lab-topology
+    decision: Never reproduce lab-internal circuit topology; redraw from published principles.
+    source: PDR-0002 D-7/D-8 (binding). Keep source citations in each master's header comment.

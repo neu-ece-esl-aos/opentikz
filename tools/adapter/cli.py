@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """Backend-adapter CLI: derive/inspect a template's ``edit_contract``.
 
-    python3 tools/adapter/cli.py derive <template-dir> [--write]
-    python3 tools/adapter/cli.py check  <template-dir>
+    python3 tools/adapter/cli.py derive   <template-dir> [--write]
+    python3 tools/adapter/cli.py check    <template-dir>
+    python3 tools/adapter/cli.py grammar  <template-dir>
 
 ``derive`` prints the adapter-derived ``edit_contract`` fields (or, with
 ``--write``, merges them into the template's ``template.meta.json`` in place,
 preserving the hand-authored ``operations`` list). ``check`` runs the same
 enforcement checks ``tools/validate.py`` runs in CI, for one template.
+``grammar`` prints the FULL per-rule placement-grammar verdict breakdown
+(PASS/FAIL/NOT_APPLICABLE/NEEDS_RENDER) for one template — ``validate.py``
+only surfaces FAIL as a blocking problem; this is the human-facing report of
+everything else, including what's routed to WP-8's rendered-PNG gate.
 """
 from __future__ import annotations
 
@@ -24,6 +29,7 @@ from adapter.checks import adapter_problems  # noqa: E402
 from adapter.contract_loader import load_contract  # noqa: E402
 from adapter.derive import derive_edit_contract, load_settled_decisions  # noqa: E402
 from adapter.intent import intent_sidecar_path, load_intent_record  # noqa: E402
+from adapter.placement_grammar import evaluate_template  # noqa: E402
 
 
 def _template_paths(template_dir: Path) -> tuple[Path, Path]:
@@ -149,6 +155,34 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_grammar(args: argparse.Namespace) -> int:
+    template_dir = Path(args.template_dir).resolve()
+    meta_path, tex_path = _template_paths(template_dir)
+    meta = load_json(meta_path)
+    if "esl-architecture" not in (meta.get("domain") or []):
+        print(f"{template_dir}: not adapter-governed (no esl-architecture domain tag) -- nothing to evaluate")
+        return 0
+    intent = load_intent_record(intent_sidecar_path(template_dir))
+    family_record = load_settled_decisions(intent.family)
+    if family_record is None:
+        print(f"{template_dir}: no settled-decisions record for family {intent.family!r} yet")
+        return 0
+    tex_text = tex_path.read_text(encoding="utf-8")
+    results = evaluate_template(tex_text, intent, family_record, tex_path=tex_path)
+    fail = False
+    for r in results:
+        print(f"{r.verdict:16s} {r.rule_id:35s} {r.detail}")
+        if r.verdict == "FAIL":
+            fail = True
+    counts = {v: sum(1 for r in results if r.verdict == v) for v in ("PASS", "FAIL", "NOT_APPLICABLE", "NEEDS_RENDER")}
+    print(
+        f"\n{template_dir.name}: {counts['PASS']} PASS, {counts['FAIL']} FAIL, "
+        f"{counts['NOT_APPLICABLE']} NOT_APPLICABLE, {counts['NEEDS_RENDER']} NEEDS_RENDER "
+        "(NEEDS_RENDER routes to WP-8's rendered-PNG self-check gate, not this static checker)"
+    )
+    return 1 if fail else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -161,6 +195,10 @@ def main(argv: list[str] | None = None) -> int:
     p_check = sub.add_parser("check", help="run adapter enforcement checks for a template")
     p_check.add_argument("template_dir")
     p_check.set_defaults(func=cmd_check)
+
+    p_grammar = sub.add_parser("grammar", help="full placement-grammar verdict breakdown for a template")
+    p_grammar.add_argument("template_dir")
+    p_grammar.set_defaults(func=cmd_grammar)
 
     args = parser.parse_args(argv)
     return args.func(args)

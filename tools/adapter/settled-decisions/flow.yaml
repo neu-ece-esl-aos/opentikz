@@ -1,0 +1,94 @@
+# Family settled-decisions record — flow (WP-7, ADR-0005 D3 §3/§3b rows)
+#
+# Lives ABOVE opentikz, owned by the backend-adapter (ADR-0005 D2) — never
+# widen edit_contract's schema to carry this. tools/adapter/derive.py's
+# load_settled_decisions()/derive_invariants() project this record's
+# placement_grammar[].rule / style_decisions[].decision /
+# semantic_decisions[].decision entries into every flow template's derived
+# edit_contract.invariants automatically; re-derivability is enforced by
+# tools/adapter/checks.py in the verify loop (drift -> FAIL).
+#
+# Schema: contract backend-contract-v1.2.0.md §3b (field-for-field — do not
+# add fields beyond family/version/placement_grammar/style_decisions/
+# semantic_decisions/constraints).
+#
+# Content provenance: transcribed verbatim from the Phase-1 seed
+# (academic.wfp settled-decisions-template.md "Worked example — flow
+# family"), survey-grounded (cp-4870). No flow-family fixture exists in this
+# fork yet (WP-6 scope, cp-4895) — this record lands now so the moment a
+# flow template is authored it is governed from the start, per the contract
+# §3 re-check rule (no fold-in additions were possible: there is no prior
+# per-template invariant text to fold in, unlike circuit-schematic/
+# architecture). See tools/adapter/settled-decisions/README.md.
+
+family: flow
+version: 1.2.0
+# 1.2.0 landing (WP-7, cp-4896): first time this family record lands in the
+# adapter seam (tools/adapter/settled-decisions/); content unchanged from
+# the Phase-1 seed's v1.2.0 survey-grounded default.
+
+placement_grammar:    # DAG + timeline — checkable relationship rules over named components,
+                      # each tagged with the §3a generic primitive(s) it instantiates.
+                      # DAG rules are the Sugiyama layered-drawing skeleton hand-applied;
+                      # timeline is a pinned-axis specialization of the same layered layout.
+  - id: monotone-stage-direction
+    primitives: [direction-axis]
+    rule: proc-stage / task-node flow is MONOTONE along one axis (L->R or T->B, pick one per
+          figure); every flow-edge advances in that direction — no backward main-axis edge.
+    rationale: A backward edge on the main axis reads as a cycle in an acyclic flow.
+  - id: layer-assignment
+    primitives: [alignment-symmetry, direction-axis]
+    rule: nodes at equal dependency DEPTH align to a common layer/rank perpendicular to the
+          flow axis (Sugiyama layer assignment); a node sits one layer past its latest
+          predecessor. Fork/join alignment is the special case of this.
+    rationale: Layers are what a reader uses to read stages; ad-hoc depths make the DAG's
+               dependency structure unreadable.
+  - id: crossing-minimization
+    primitives: [typed-routing, relative-placement]
+    rule: order nodes WITHIN a layer to minimize edge crossings (Sugiyama crossing
+          minimization); reorder siblings before accepting a crossing.
+    rationale: Edge crossings are the single most common readability failure in hand-drawn
+               DAGs; the first-cut had no rule against them.
+  - id: edges-follow-data
+    primitives: [typed-routing, direction-axis]
+    rule: a flow-edge points from producer to consumer in the data's direction; its label
+          names what flows/the dependency; edges never cross a node they don't touch.
+    rationale: Edge direction IS the dependency; a reversed edge inverts the DAG.
+  - id: fork-join-alignment
+    primitives: [alignment-symmetry]
+    rule: branches of a fork start aligned on the cross-axis and re-align at their join node;
+          parallel siblings share a cross-axis coordinate (a layer, per layer-assignment).
+    rationale: Alignment makes fork/join structure legible at a glance.
+  - id: params-off-axis
+    primitives: [relative-placement]
+    rule: param-node artifacts sit OFF the main flow axis (offset to the side), tied to
+          their stage by a short edge; they are inputs, not pipeline stages.
+    rationale: Putting a parameter on the main axis reads it as a processing stage.
+  - id: timeline-pinned-axis
+    primitives: [pinned-axis, alignment-symmetry]
+    rule: (timeline/sequence) a timeline is a LAYERED layout with one axis PINNED to a shared
+          external coordinate (time) — all lifelines register against ONE shared time-axis,
+          events at the same time align across lifelines (the pinned axis replaces free layer
+          assignment), and a life-message never runs backward in time.
+    rationale: The pinned time axis is what makes simultaneity and ordering readable; this is
+               the pinned-axis specialization of the layered DAG layout, not a separate model.
+  - id: lifelines-parallel
+    primitives: [alignment-symmetry, pinned-axis]
+    rule: (sequence) lifelines are parallel, evenly spaced, one per actor; sync-markers sit
+          ON their lifeline; a life-message connects two lifelines at a single time depth.
+    rationale: Drifting/uneven-spaced lifelines destroy the time-alignment the axis provides.
+
+style_decisions:
+  - id: stage-vs-param-accent
+    decision: proc-stage = NavyBlue accent, param-node = ForestGreen chamfered box (§2 tokens).
+    rationale: Stage vs artifact is legible by shape+color.
+  - id: stealth-everywhere
+    decision: all directed edges (flow-edge, life-message, time-axis) use Stealth arrowheads.
+    rationale: Contract §2 `arrow = Stealth`, frozen "everywhere".
+
+semantic_decisions:
+  - id: acyclic-unless-marked
+    decision: the main flow is acyclic; a genuine feedback edge is drawn distinctly (dashed).
+    rationale: Don't let a feedback loop masquerade as forward flow.
+
+constraints: []

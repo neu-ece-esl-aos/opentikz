@@ -34,7 +34,17 @@
     "invariants": [
       "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
       "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
-      "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
+      "monotone-stage-direction: proc-stage / task-node flow is MONOTONE along one axis (L->R or T->B, pick one per figure); every flow-edge advances in that direction — no backward main-axis edge.",
+      "layer-assignment: nodes at equal dependency DEPTH align to a common layer/rank perpendicular to the flow axis (Sugiyama layer assignment); a node sits one layer past its latest predecessor. Fork/join alignment is the special case of this.",
+      "crossing-minimization: order nodes WITHIN a layer to minimize edge crossings (Sugiyama crossing minimization); reorder siblings before accepting a crossing.",
+      "edges-follow-data: a flow-edge points from producer to consumer in the data's direction; its label names what flows/the dependency; edges never cross a node they don't touch.",
+      "fork-join-alignment: branches of a fork start aligned on the cross-axis and re-align at their join node; parallel siblings share a cross-axis coordinate (a layer, per layer-assignment).",
+      "params-off-axis: param-node artifacts sit OFF the main flow axis (offset to the side), tied to their stage by a short edge; they are inputs, not pipeline stages.",
+      "timeline-pinned-axis: (timeline/sequence) a timeline is a LAYERED layout with one axis PINNED to a shared external coordinate (time) — all lifelines register against ONE shared time-axis, events at the same time align across lifelines (the pinned axis replaces free layer assignment), and a life-message never runs backward in time.",
+      "lifelines-parallel: (sequence) lifelines are parallel, evenly spaced, one per actor; sync-markers sit ON their lifeline; a life-message connects two lifelines at a single time depth.",
+      "stage-vs-param-accent: proc-stage = NavyBlue accent, param-node = ForestGreen chamfered box (§2 tokens).",
+      "stealth-everywhere: all directed edges (flow-edge, life-message, time-axis) use Stealth arrowheads.",
+      "acyclic-unless-marked: the main flow is acyclic; a genuine feedback edge is drawn distinctly (dashed)."
     ]
   }
 }
