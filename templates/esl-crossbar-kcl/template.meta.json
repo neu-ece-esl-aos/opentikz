@@ -1,0 +1,39 @@
+{
+  "id": "esl-crossbar-kcl",
+  "name": "ESL analog crossbar cell + KCL summation node",
+  "type": "template",
+  "domain": ["circuits", "esl-architecture"],
+  "tags": ["circuit-schematic", "circuitikz", "crossbar", "analog", "kcl", "current-mode", "in-memory-compute", "weight-cell"],
+  "venue": ["ISSCC", "VLSI Symposium", "TCAS-I", "JSSC"],
+  "author": "cp-4856 PoC graft (grounded in analog-ai EmbML-HB-2026-Ch-AnalogEDAI/fig/figstyle.tex, not a fork of that file)",
+  "license": "CC0-1.0",
+  "requires": ["tikz", "circuitikz", "amsmath", "arrows.meta", "backgrounds", "positioning", "calc"],
+  "preview": "preview.svg",
+  "description": "Analog in-memory-compute crossbar readout: 2x2 weight-cell array driven by row voltage sources, per-column KCL summation (Sigma) nodes, and a real circuitikz device-symbol readout stage (sense resistor / reference current source) per column. First circuitikz-based template in this local checkout -- opentikz ships zero circuitikz coverage upstream. Colors are the analog-ai domain-semantic scheme (blue=input/activation, green=analog weight cell, orange=analog current/summation), grafted from figstyle.tex, not opentikz's five-color ot* palette (see cp-4856 learnings note on the palette-invariant collision).",
+  "edit_contract": {
+    "parameters": [
+      {"name": "\\rowgap", "type": "length-cm", "meaning": "vertical gap between input rows", "default": "1.1"},
+      {"name": "\\colgap", "type": "length-cm", "meaning": "horizontal gap between columns", "default": "1.6"},
+      {"name": "\\vinonelabel", "type": "text", "meaning": "row 1 voltage-source label"},
+      {"name": "\\vintwolabel", "type": "text", "meaning": "row 2 voltage-source label"},
+      {"name": "\\kcllabel", "type": "text", "meaning": "KCL summation-node glyph (shared across columns)"},
+      {"name": "\\outcollabel", "type": "text", "meaning": "final output-current label"}
+    ],
+    "node_naming": "fixed semantic node names: (v<row>) row voltage sources, (g<row><col>) crossbar cells (e.g. g11, g21), (k<col>) per-column KCL nodes, (k<col>out) readout-branch coordinate; new rows/columns extend the same <row>/<col> integer-suffix scheme -- this PoC hand-instantiates a fixed 2x2 array rather than a \\foreach loop (see operations.add-row / add-column for what a real edit does)",
+    "styles": ["kclnode", "cell", "vsource", "sidenote", "domainlbl", "currentlbl", "voltagelbl", "awire", "dwire", "vwire"],
+    "operations": [
+      {"id": "rename-label", "summary": "edit the matching label macro, or the literal $G_{i,j}$/$I_{i,j}$ text in a cell/current-label node (kept literal, not macro-driven, to preserve the family's comma-separated two-index subscript convention -- see invariants)"},
+      {"id": "add-row", "summary": "add \\node[vsource] (v3) at (0,-2*\\rowgap) {...}; add a \\node[cell] (g3<c>) per existing column at the same x as g1<c>/g2<c>, y=-2*\\rowgap; wire \\draw[vwire] (v3) -- (g3<c>); and \\draw[awire] (g3<c>) -- (k<c>); for every column"},
+      {"id": "add-column", "summary": "add a \\node[cell] (g<r>3) per existing row at x=3*\\colgap; wire \\draw[vwire] (v<r>) -- (g<r>3); add a \\node[kclnode] (k3) below the new column; wire every \\draw[awire] (g<r>3) -- (k3); and its readout branch (see add-readout-device)"},
+      {"id": "add-readout-device", "summary": "declare \\coordinate (k<c>out) at ($(k<c>)+(0,-1.15)$); then \\draw (k<c>) to[<device>, l=$<label>$, o-o] (k<c>out); -- <device> is a real circuitikz bipole key (R, I, C, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes"},
+      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role in that role's style definition; keep vsource=blue, cell=green, kclnode/awire/currentlbl=orange, per the analog-ai family's settled scheme, unless a project's own settled-decisions record overrides it (this template ships no settled-decisions record of its own -- it is a PoC graft, not the shipped Phase-1 component library, see D4/R2.3 of ADR-0004)"}
+    ],
+    "invariants": [
+      "two-index subscripts stay comma-separated ($G_{i,j}$, $I_{i,j}$), never $G_{ij}$ -- family-wide convention from figstyle.tex/adcbuffer.tex",
+      "circuitikz `to[...]` bipoles are reserved for real EE devices (resistor/source/capacitor/etc.); crossbar cells, KCL nodes, and voltage-source glyphs stay the hand-styled figstyle node styles (cell/kclnode/vsource) -- do not redraw a cell as a circuitikz bipole, and do not redraw a real device as a plain tikz node; mixing the two idioms in one figure is intentional here and must stay legible (label each readout branch, as in operations.add-readout-device)",
+      "awire (orange, analog current) is reserved for cell-to-KCL-node and KCL-node-to-device wiring; vwire (blue) is reserved for source-to-cell wiring; never swap wire colors across the analog/digital or voltage/current domain boundary",
+      "every KCL node must have a labeled incoming-current annotation (currentlbl) placed clear of neighboring columns -- verify by rendering to PNG before committing; label collisions between adjacent columns are the primary failure mode this template hit during the cp-4856 PoC (fixed via xshift offsets on the readout captions)",
+      "the visual self-check (pdftoppm -> read the PNG) is mandatory before calling this template done -- this exact template shipped with two colliding label pairs on first compile and only the render caught it"
+    ]
+  }
+}

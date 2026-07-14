@@ -2062,6 +2062,284 @@
     ]
   },
   {
+    "author": "cp-4856 PoC graft (grounded in tsarilp-pub doc/common/tikzsetup.tex, not a fork of that file)",
+    "description": "MPSoC-style tile/bus architecture figure: per-tile Core + Accelerator + config-register block joined by an intra-tile bus, two tiles joined by a dashed inter-tile NoC bus through a shared I/O terminal node. Colors are the ESL domain-semantic scheme (Aquamarine=core/compute, NavyBlue=datapath/interconnect, ForestGreen=config/parameters, gray=terminal/IO) grafted from tsarilp tikzsetup.tex, not opentikz's five-color ot* palette (see cp-4856 learnings note on the palette-invariant collision).",
+    "domain": [
+      "systems",
+      "esl-architecture"
+    ],
+    "edit_contract": {
+      "invariants": [
+        "each tile's boundary fit node must be declared after all nodes it fits, inside an on-background-layer scope, so it sits behind them",
+        "preserve semantic node names; give new components clear role-based names with a tile-index suffix",
+        "colors encode role/domain semantics (core/process/parameters/terminal/intrabus/interbus), not decoration — do not introduce a color that is not tied to a role, and do not reuse opentikz's otblue/otorange/otteal/otpurple/otgray names for these roles (palette collision — see learnings note)",
+        "the inter-tile bus is always dashed and the intra-tile bus is always solid — this distinction is load-bearing (NoC/global vs. local/tile-internal), grafted from tikzsetup.tex's intrabus/interbus split"
+      ],
+      "node_naming": "fixed semantic node names: (core1) (acc1) (cfg1) (tile1) (core2) (acc2) (cfg2) (tile2) (io); new per-tile components take a role-based name with the tile-index suffix (e.g. (mem1), (dma2))",
+      "operations": [
+        {
+          "id": "rename-component",
+          "summary": "edit the matching label macro"
+        },
+        {
+          "id": "add-tile-component",
+          "summary": "declare a node inside the tile with a role style (core/process/parameters), position it relative to an existing tile-local node, connect it with intrabus, then add it to that tile's fit=(...) list so the boundary re-encloses it"
+        },
+        {
+          "id": "add-tile",
+          "summary": "duplicate a tile's node block with a fresh index (3, 4, ...), position its fit node right=\\tilesep cm of the previous tile, wire the shared io node to the new tile's fit.north, and extend the coordinate used for the interbus caption if more than two tiles are joined at the io hub"
+        },
+        {
+          "id": "change-component-role",
+          "summary": "swap a node's style to change its role: core<->process<->parameters; each role keeps its own dedicated palette color per the domain-semantic scheme, so a role change also changes the color, never just the shape"
+        },
+        {
+          "id": "add-bus",
+          "summary": "intra-tile: \\draw[intrabus] (a) -- (b); inter-tile/NoC: \\draw[interbus] (tileN.<anchor>) -- (io);"
+        },
+        {
+          "id": "resize-tile-boundary",
+          "summary": "adjust the tile's fit margins={left=...,right=...,top=...,bottom=...} values (grafted tikzsetup.tex pgfkeys helper) or extend which nodes are in its fit=(...) list"
+        },
+        {
+          "id": "recolor-role",
+          "summary": "change the domain-semantic color for a whole role (not a single instance) in that role's style definition; keep intrabus=Orange, interbus=NavyBlue-dashed, core=Aquamarine, process=NavyBlue, parameters=ForestGreen unless the family's settled-decisions record says otherwise (see cp-4856 note: this template has no settled-decisions record of its own yet — it is a PoC graft, not the shipped Phase-1 component library)"
+        }
+      ],
+      "parameters": [
+        {
+          "default": "2.6",
+          "meaning": "horizontal gap between the two tile boundary boxes",
+          "name": "\\tilesep",
+          "type": "length-cm"
+        },
+        {
+          "default": "50pt",
+          "meaning": "core box minimum height",
+          "name": "\\coresize",
+          "type": "length-pt"
+        },
+        {
+          "default": "64pt",
+          "meaning": "core box minimum width",
+          "name": "\\corewidth",
+          "type": "length-pt"
+        },
+        {
+          "meaning": "tile 0 boundary label",
+          "name": "\\tileonelabel",
+          "type": "text"
+        },
+        {
+          "meaning": "tile 1 boundary label",
+          "name": "\\tiletwolabel",
+          "type": "text"
+        },
+        {
+          "meaning": "tile 0 core label",
+          "name": "\\coreonelabel",
+          "type": "text"
+        },
+        {
+          "meaning": "tile 1 core label",
+          "name": "\\coretwolabel",
+          "type": "text"
+        },
+        {
+          "meaning": "tile 0 accelerator label",
+          "name": "\\acconelabel",
+          "type": "text"
+        },
+        {
+          "meaning": "tile 1 accelerator label",
+          "name": "\\acctwolabel",
+          "type": "text"
+        },
+        {
+          "meaning": "tile 0 config-register block label (use \\\\ for two lines)",
+          "name": "\\cfgonelabel",
+          "type": "text"
+        },
+        {
+          "meaning": "tile 1 config-register block label (use \\\\ for two lines)",
+          "name": "\\cfgtwolabel",
+          "type": "text"
+        },
+        {
+          "meaning": "shared I/O terminal node label",
+          "name": "\\iolabel",
+          "type": "text"
+        },
+        {
+          "meaning": "inter-tile bus caption above the I/O node",
+          "name": "\\interbuslabel",
+          "type": "text"
+        }
+      ],
+      "styles": [
+        "PE",
+        "core",
+        "process",
+        "parameters",
+        "terminal node",
+        "intrabus",
+        "interbus",
+        "fit margins"
+      ]
+    },
+    "id": "esl-architecture-block",
+    "license": "CC0-1.0",
+    "name": "ESL MPSoC tile / bus architecture block",
+    "path": "templates/esl-architecture-block",
+    "preview": "preview.svg",
+    "requires": [
+      "xcolor",
+      "tikz",
+      "calc",
+      "shapes",
+      "positioning",
+      "backgrounds",
+      "fit",
+      "patterns",
+      "arrows.meta"
+    ],
+    "tags": [
+      "mpsoc",
+      "architecture",
+      "block diagram",
+      "tile",
+      "core",
+      "accelerator",
+      "noc",
+      "bus",
+      "digital"
+    ],
+    "type": "template",
+    "venue": [
+      "DAC",
+      "ICCAD",
+      "DATE",
+      "ESWEEK"
+    ]
+  },
+  {
+    "author": "cp-4856 PoC graft (grounded in analog-ai EmbML-HB-2026-Ch-AnalogEDAI/fig/figstyle.tex, not a fork of that file)",
+    "description": "Analog in-memory-compute crossbar readout: 2x2 weight-cell array driven by row voltage sources, per-column KCL summation (Sigma) nodes, and a real circuitikz device-symbol readout stage (sense resistor / reference current source) per column. First circuitikz-based template in this local checkout -- opentikz ships zero circuitikz coverage upstream. Colors are the analog-ai domain-semantic scheme (blue=input/activation, green=analog weight cell, orange=analog current/summation), grafted from figstyle.tex, not opentikz's five-color ot* palette (see cp-4856 learnings note on the palette-invariant collision).",
+    "domain": [
+      "circuits",
+      "esl-architecture"
+    ],
+    "edit_contract": {
+      "invariants": [
+        "two-index subscripts stay comma-separated ($G_{i,j}$, $I_{i,j}$), never $G_{ij}$ -- family-wide convention from figstyle.tex/adcbuffer.tex",
+        "circuitikz `to[...]` bipoles are reserved for real EE devices (resistor/source/capacitor/etc.); crossbar cells, KCL nodes, and voltage-source glyphs stay the hand-styled figstyle node styles (cell/kclnode/vsource) -- do not redraw a cell as a circuitikz bipole, and do not redraw a real device as a plain tikz node; mixing the two idioms in one figure is intentional here and must stay legible (label each readout branch, as in operations.add-readout-device)",
+        "awire (orange, analog current) is reserved for cell-to-KCL-node and KCL-node-to-device wiring; vwire (blue) is reserved for source-to-cell wiring; never swap wire colors across the analog/digital or voltage/current domain boundary",
+        "every KCL node must have a labeled incoming-current annotation (currentlbl) placed clear of neighboring columns -- verify by rendering to PNG before committing; label collisions between adjacent columns are the primary failure mode this template hit during the cp-4856 PoC (fixed via xshift offsets on the readout captions)",
+        "the visual self-check (pdftoppm -> read the PNG) is mandatory before calling this template done -- this exact template shipped with two colliding label pairs on first compile and only the render caught it"
+      ],
+      "node_naming": "fixed semantic node names: (v<row>) row voltage sources, (g<row><col>) crossbar cells (e.g. g11, g21), (k<col>) per-column KCL nodes, (k<col>out) readout-branch coordinate; new rows/columns extend the same <row>/<col> integer-suffix scheme -- this PoC hand-instantiates a fixed 2x2 array rather than a \\foreach loop (see operations.add-row / add-column for what a real edit does)",
+      "operations": [
+        {
+          "id": "rename-label",
+          "summary": "edit the matching label macro, or the literal $G_{i,j}$/$I_{i,j}$ text in a cell/current-label node (kept literal, not macro-driven, to preserve the family's comma-separated two-index subscript convention -- see invariants)"
+        },
+        {
+          "id": "add-row",
+          "summary": "add \\node[vsource] (v3) at (0,-2*\\rowgap) {...}; add a \\node[cell] (g3<c>) per existing column at the same x as g1<c>/g2<c>, y=-2*\\rowgap; wire \\draw[vwire] (v3) -- (g3<c>); and \\draw[awire] (g3<c>) -- (k<c>); for every column"
+        },
+        {
+          "id": "add-column",
+          "summary": "add a \\node[cell] (g<r>3) per existing row at x=3*\\colgap; wire \\draw[vwire] (v<r>) -- (g<r>3); add a \\node[kclnode] (k3) below the new column; wire every \\draw[awire] (g<r>3) -- (k3); and its readout branch (see add-readout-device)"
+        },
+        {
+          "id": "add-readout-device",
+          "summary": "declare \\coordinate (k<c>out) at ($(k<c>)+(0,-1.15)$); then \\draw (k<c>) to[<device>, l=$<label>$, o-o] (k<c>out); -- <device> is a real circuitikz bipole key (R, I, C, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes"
+        },
+        {
+          "id": "recolor-role",
+          "summary": "change the domain-semantic color for a whole role in that role's style definition; keep vsource=blue, cell=green, kclnode/awire/currentlbl=orange, per the analog-ai family's settled scheme, unless a project's own settled-decisions record overrides it (this template ships no settled-decisions record of its own -- it is a PoC graft, not the shipped Phase-1 component library, see D4/R2.3 of ADR-0004)"
+        }
+      ],
+      "parameters": [
+        {
+          "default": "1.1",
+          "meaning": "vertical gap between input rows",
+          "name": "\\rowgap",
+          "type": "length-cm"
+        },
+        {
+          "default": "1.6",
+          "meaning": "horizontal gap between columns",
+          "name": "\\colgap",
+          "type": "length-cm"
+        },
+        {
+          "meaning": "row 1 voltage-source label",
+          "name": "\\vinonelabel",
+          "type": "text"
+        },
+        {
+          "meaning": "row 2 voltage-source label",
+          "name": "\\vintwolabel",
+          "type": "text"
+        },
+        {
+          "meaning": "KCL summation-node glyph (shared across columns)",
+          "name": "\\kcllabel",
+          "type": "text"
+        },
+        {
+          "meaning": "final output-current label",
+          "name": "\\outcollabel",
+          "type": "text"
+        }
+      ],
+      "styles": [
+        "kclnode",
+        "cell",
+        "vsource",
+        "sidenote",
+        "domainlbl",
+        "currentlbl",
+        "voltagelbl",
+        "awire",
+        "dwire",
+        "vwire"
+      ]
+    },
+    "id": "esl-crossbar-kcl",
+    "license": "CC0-1.0",
+    "name": "ESL analog crossbar cell + KCL summation node",
+    "path": "templates/esl-crossbar-kcl",
+    "preview": "preview.svg",
+    "requires": [
+      "tikz",
+      "circuitikz",
+      "amsmath",
+      "arrows.meta",
+      "backgrounds",
+      "positioning",
+      "calc"
+    ],
+    "tags": [
+      "circuit-schematic",
+      "circuitikz",
+      "crossbar",
+      "analog",
+      "kcl",
+      "current-mode",
+      "in-memory-compute",
+      "weight-cell"
+    ],
+    "type": "template",
+    "venue": [
+      "ISSCC",
+      "VLSI Symposium",
+      "TCAS-I",
+      "JSSC"
+    ]
+  },
+  {
     "author": "OpenTikZ contributors",
     "description": "Standard flowchart: terminal pills (start/end), process rectangles, a decision diamond with Yes/No branches, and a retry loop. Parametric spacing and labels.",
     "domain": [

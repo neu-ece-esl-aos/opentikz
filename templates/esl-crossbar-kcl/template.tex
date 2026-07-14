@@ -1,0 +1,93 @@
+\documentclass[tikz, border=8pt]{standalone}
+
+% --- packages (mirror these in template.meta.json "requires") ---
+% circuitikz is the load-bearing addition this template tests: opentikz ships
+% ZERO circuitikz templates today (generic TikZ only). See the cp-4856
+% learnings note for whether this is a clean graft or fights the model.
+\usepackage{circuitikz}
+\usepackage{amsmath}
+\usetikzlibrary{arrows.meta, backgrounds, positioning, calc}
+
+% --- palette: analog-ai domain-semantic scheme (NOT opentikz's ot* palette) ---
+% Grafted from figstyle.tex (analog-ai EmbML-HB-2026-Ch-AnalogEDAI/fig/,
+% Gunar-reviewed 2026-07-13 on adcbuffer.tex): blue=input/activation,
+% green=analog weight cell, gray=digital, orange=analog current/accumulation.
+
+\begin{document}
+% ==== parameters (edit these) ============================================
+\def\ncols{2}          % number of crossbar columns rendered (informational;
+                        % this PoC hand-instantiates 2 — see edit_contract
+                        % "add-column" for how a real edit extends this)
+\def\rowgap{1.1}        % vertical gap between input rows (cm)
+\def\colgap{1.6}        % horizontal gap between columns (cm)
+% labels
+\def\vinonelabel{$V_{1}$}
+\def\vintwolabel{$V_{2}$}
+\def\kcllabel{$\Sigma$}
+\def\outcollabel{$I_{\text{out}}$}
+% =========================================================================
+
+\begin{tikzpicture}[
+    font=\small,
+    >=Stealth,
+    % --- grafted node/wire styles, verbatim names from figstyle.tex ---
+    kclnode/.style={draw, circle, thick, fill=orange!35,
+                    minimum size=6mm, inner sep=0pt},
+    cell/.style={draw, rectangle, thick, fill=green!15,
+                 minimum width=0.95cm, minimum height=0.60cm,
+                 font=\footnotesize},
+    vsource/.style={draw=blue!55, circle, line width=1pt, fill=blue!18,
+                    text=black, minimum size=8mm, inner sep=0pt,
+                    font=\scriptsize\itshape},
+    sidenote/.style={font=\fontsize{6.5}{8}\selectfont, gray!55!black},
+    domainlbl/.style={font=\fontsize{7}{9}\selectfont\itshape},
+    currentlbl/.style={font=\fontsize{6.5}{8}\selectfont, orange!65!black},
+    voltagelbl/.style={font=\fontsize{6.5}{8}\selectfont, blue!65!black},
+    awire/.style={orange!80!black, thick},
+    dwire/.style={gray!65!black, thick},
+    vwire/.style={blue!60!black, thick},
+  ]
+
+  % ---- row voltage sources (analog input activations) ----
+  \node[vsource] (v1) at (0, 0)          {\vinonelabel};
+  \node[vsource] (v2) at (0, -\rowgap)   {\vintwolabel};
+
+  % ---- crossbar weight cells: 2 rows x 2 cols ----
+  \node[cell] (g11) at (\colgap, 0)          {$G_{1,1}$};
+  \node[cell] (g21) at (\colgap, -\rowgap)   {$G_{2,1}$};
+  \node[cell] (g12) at (2*\colgap, 0)        {$G_{1,2}$};
+  \node[cell] (g22) at (2*\colgap, -\rowgap) {$G_{2,2}$};
+
+  \draw[vwire] (v1) -- (g11);
+  \draw[vwire] (v1) -- (g12);
+  \draw[vwire] (v2) -- (g21);
+  \draw[vwire] (v2) -- (g22);
+
+  % ---- per-column KCL summation nodes ----
+  \node[kclnode] (k1) at (\colgap, -2*\rowgap-0.4)   {\kcllabel};
+  \node[kclnode] (k2) at (2*\colgap, -2*\rowgap-0.4) {\kcllabel};
+
+  \draw[awire] (g11) -- (k1);
+  \draw[awire] (g21) -- (k1);
+  \draw[awire] (g12) -- (k2);
+  \draw[awire] (g22) -- (k2);
+
+  \node[currentlbl, left=1pt of k1.west, xshift=-2pt] {$I_{1,1}{+}I_{2,1}$};
+  \node[currentlbl, right=1pt of k2.east, xshift=2pt] {$I_{1,2}{+}I_{2,2}$};
+
+  % ---- real circuitikz device symbols on the readout path (the genuine
+  %      EE-symbol test: opentikz's generic-TikZ node styles above cannot
+  %      express these; only circuitikz's `to[...]` bipole syntax can) ----
+  \coordinate (k1out) at ($(k1)+(0,-1.15)$);
+  \coordinate (k2out) at ($(k2)+(0,-1.15)$);
+  \draw (k1) to[R=$R_{\text{sense}}$, o-o] (k1out);
+  \draw (k2) to[I, l=$I_{\text{ref}}$, o-o] (k2out);
+
+  \node[sidenote, below=2pt of k1out, xshift=-9pt] {col.\,1 readout};
+  \node[sidenote, below=2pt of k2out, xshift=9pt] {col.\,2 readout};
+
+  \node[domainlbl, blue!65!black, above=6pt of v1] {Analog domain};
+  \node[currentlbl, right=4pt of k2out] {\outcollabel};
+
+\end{tikzpicture}
+\end{document}

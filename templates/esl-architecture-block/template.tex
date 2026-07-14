@@ -1,0 +1,105 @@
+\documentclass[border=8pt]{standalone}
+
+% --- packages (mirror these in template.meta.json "requires") ---
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc, shapes, positioning, backgrounds, fit, patterns, arrows.meta}
+
+% --- palette: ESL/tsarilp domain-semantic scheme (NOT opentikz's ot* palette) ---
+% Grafted from /home/agent1/pubs/tsarilp-pub/doc/common/tikzsetup.tex (read-only
+% reference). Kept as dvipsnames names, matching the source library, rather than
+% remapped onto opentikz's five-color otblue/otorange/otteal/otpurple/otgray set
+% (see learnings note §"palette collision").
+\definecolor{DarkGray}{gray}{0.25}
+
+\begin{document}
+% ==== parameters (edit these) ============================================
+\def\tilesep{2.6}     % horizontal gap between tile boundaries (cm)
+\def\coresize{50pt}   % core box minimum height
+\def\corewidth{64pt}  % core box minimum width
+% labels
+\def\tileonelabel{Tile 0}
+\def\tiletwolabel{Tile 1}
+\def\coreonelabel{Core}
+\def\coretwolabel{Core}
+\def\acconelabel{Accel}
+\def\acctwolabel{Accel}
+\def\cfgonelabel{Cfg\\Regs}
+\def\cfgtwolabel{Cfg\\Regs}
+\def\iolabel{I/O}
+\def\interbuslabel{Inter-tile bus (NoC)}
+% =========================================================================
+
+\begin{tikzpicture}[
+    node distance=8pt and \tilesep cm,
+    >=Stealth,
+    % --- grafted styles (tikzsetup.tex naming/coloring kept verbatim) ---
+    PE/.style={draw, thick, minimum size=35pt, align=center},
+    core/.style={PE, draw=Aquamarine, fill=Aquamarine!20,
+      minimum width=\corewidth, minimum height=\coresize},
+    process/.style={draw=NavyBlue, fill=NavyBlue!10, very thick,
+      minimum width=\corewidth, minimum height=0.7*\coresize, align=center,
+      font=\scriptsize},
+    parameters/.style={chamfered rectangle,
+      chamfered rectangle corners={north east},
+      draw=ForestGreen, fill=ForestGreen!20, very thick,
+      minimum width=0.85*\corewidth, minimum height=0.55*\coresize,
+      align=center, font=\scriptsize},
+    terminal node/.style={draw=gray, fill=black!10, text=DarkGray, thick,
+      circle, minimum size=22pt, font=\scriptsize},
+    intrabus/.style={draw, Orange, thick},
+    interbus/.style={draw, NavyBlue, thick, dashed},
+    % --- fit-margins helper, grafted verbatim from tikzsetup.tex ---
+    fit margins/.style={/tikz/afit/.cd,#1,
+      /tikz/.cd,
+      inner xsep=\pgfkeysvalueof{/tikz/afit/left}+\pgfkeysvalueof{/tikz/afit/right},
+      inner ysep=\pgfkeysvalueof{/tikz/afit/top}+\pgfkeysvalueof{/tikz/afit/bottom},
+      xshift=-\pgfkeysvalueof{/tikz/afit/left}+\pgfkeysvalueof{/tikz/afit/right},
+      yshift=-\pgfkeysvalueof{/tikz/afit/bottom}+\pgfkeysvalueof{/tikz/afit/top}},
+    afit/.cd, left/.initial=6pt, right/.initial=6pt,
+    bottom/.initial=6pt, top/.initial=14pt,
+  ]
+
+  % ---- Tile 0 ----
+  \node[core] (core1) {\coreonelabel};
+  \node[process, below=of core1] (acc1) {\acconelabel};
+  \node[parameters, right=10pt of core1] (cfg1) {\cfgonelabel};
+  \draw[intrabus] (core1) -- (acc1);
+  \draw[intrabus] (core1) -- (cfg1);
+
+  \begin{scope}[on background layer]
+    \node[draw=Aquamarine!70!black, dashed, rounded corners=4pt,
+      fit margins={left=8pt,right=8pt,top=16pt,bottom=8pt},
+      fit=(core1)(acc1)(cfg1)] (tile1) {};
+    \node[font=\scriptsize\bfseries, text=Aquamarine!60!black,
+      anchor=north west] at ([xshift=2pt,yshift=-2pt]tile1.north west)
+      {\tileonelabel};
+  \end{scope}
+
+  % ---- Tile 1 ----
+  \node[core, right=\tilesep cm of tile1] (core2) {\coretwolabel};
+  \node[process, below=of core2] (acc2) {\acctwolabel};
+  \node[parameters, right=10pt of core2] (cfg2) {\cfgtwolabel};
+  \draw[intrabus] (core2) -- (acc2);
+  \draw[intrabus] (core2) -- (cfg2);
+
+  \begin{scope}[on background layer]
+    \node[draw=Aquamarine!70!black, dashed, rounded corners=4pt,
+      fit margins={left=8pt,right=8pt,top=16pt,bottom=8pt},
+      fit=(core2)(acc2)(cfg2)] (tile2) {};
+    \node[font=\scriptsize\bfseries, text=Aquamarine!60!black,
+      anchor=north west] at ([xshift=2pt,yshift=-2pt]tile2.north west)
+      {\tiletwolabel};
+  \end{scope}
+
+  % ---- shared I/O terminal + inter-tile bus ----
+  % calc midpoint idiom (tikzsetup.tex convention: ($(a)!0.5!(b)$)), bound to a
+  % named \coordinate so it can be a "right=of"/"above=of" positioning anchor.
+  \coordinate (tilemid) at ($(tile1.north)!0.5!(tile2.north)$);
+  \node[terminal node, above=18pt of tilemid] (io) {\iolabel};
+  \draw[interbus] (tile1.north) -- (io);
+  \draw[interbus] (tile2.north) -- (io);
+  \node[font=\tiny, text=NavyBlue!70!black, above=6pt of io] {\interbuslabel};
+
+\end{tikzpicture}
+\end{document}

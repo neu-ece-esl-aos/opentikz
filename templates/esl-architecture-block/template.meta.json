@@ -1,0 +1,47 @@
+{
+  "id": "esl-architecture-block",
+  "name": "ESL MPSoC tile / bus architecture block",
+  "type": "template",
+  "domain": ["systems", "esl-architecture"],
+  "tags": ["mpsoc", "architecture", "block diagram", "tile", "core", "accelerator", "noc", "bus", "digital"],
+  "venue": ["DAC", "ICCAD", "DATE", "ESWEEK"],
+  "author": "cp-4856 PoC graft (grounded in tsarilp-pub doc/common/tikzsetup.tex, not a fork of that file)",
+  "license": "CC0-1.0",
+  "requires": ["xcolor", "tikz", "calc", "shapes", "positioning", "backgrounds", "fit", "patterns", "arrows.meta"],
+  "preview": "preview.svg",
+  "description": "MPSoC-style tile/bus architecture figure: per-tile Core + Accelerator + config-register block joined by an intra-tile bus, two tiles joined by a dashed inter-tile NoC bus through a shared I/O terminal node. Colors are the ESL domain-semantic scheme (Aquamarine=core/compute, NavyBlue=datapath/interconnect, ForestGreen=config/parameters, gray=terminal/IO) grafted from tsarilp tikzsetup.tex, not opentikz's five-color ot* palette (see cp-4856 learnings note on the palette-invariant collision).",
+  "edit_contract": {
+    "parameters": [
+      {"name": "\\tilesep", "type": "length-cm", "meaning": "horizontal gap between the two tile boundary boxes", "default": "2.6"},
+      {"name": "\\coresize", "type": "length-pt", "meaning": "core box minimum height", "default": "50pt"},
+      {"name": "\\corewidth", "type": "length-pt", "meaning": "core box minimum width", "default": "64pt"},
+      {"name": "\\tileonelabel", "type": "text", "meaning": "tile 0 boundary label"},
+      {"name": "\\tiletwolabel", "type": "text", "meaning": "tile 1 boundary label"},
+      {"name": "\\coreonelabel", "type": "text", "meaning": "tile 0 core label"},
+      {"name": "\\coretwolabel", "type": "text", "meaning": "tile 1 core label"},
+      {"name": "\\acconelabel", "type": "text", "meaning": "tile 0 accelerator label"},
+      {"name": "\\acctwolabel", "type": "text", "meaning": "tile 1 accelerator label"},
+      {"name": "\\cfgonelabel", "type": "text", "meaning": "tile 0 config-register block label (use \\\\ for two lines)"},
+      {"name": "\\cfgtwolabel", "type": "text", "meaning": "tile 1 config-register block label (use \\\\ for two lines)"},
+      {"name": "\\iolabel", "type": "text", "meaning": "shared I/O terminal node label"},
+      {"name": "\\interbuslabel", "type": "text", "meaning": "inter-tile bus caption above the I/O node"}
+    ],
+    "node_naming": "fixed semantic node names: (core1) (acc1) (cfg1) (tile1) (core2) (acc2) (cfg2) (tile2) (io); new per-tile components take a role-based name with the tile-index suffix (e.g. (mem1), (dma2))",
+    "styles": ["PE", "core", "process", "parameters", "terminal node", "intrabus", "interbus", "fit margins"],
+    "operations": [
+      {"id": "rename-component", "summary": "edit the matching label macro"},
+      {"id": "add-tile-component", "summary": "declare a node inside the tile with a role style (core/process/parameters), position it relative to an existing tile-local node, connect it with intrabus, then add it to that tile's fit=(...) list so the boundary re-encloses it"},
+      {"id": "add-tile", "summary": "duplicate a tile's node block with a fresh index (3, 4, ...), position its fit node right=\\tilesep cm of the previous tile, wire the shared io node to the new tile's fit.north, and extend the coordinate used for the interbus caption if more than two tiles are joined at the io hub"},
+      {"id": "change-component-role", "summary": "swap a node's style to change its role: core<->process<->parameters; each role keeps its own dedicated palette color per the domain-semantic scheme, so a role change also changes the color, never just the shape"},
+      {"id": "add-bus", "summary": "intra-tile: \\draw[intrabus] (a) -- (b); inter-tile/NoC: \\draw[interbus] (tileN.<anchor>) -- (io);"},
+      {"id": "resize-tile-boundary", "summary": "adjust the tile's fit margins={left=...,right=...,top=...,bottom=...} values (grafted tikzsetup.tex pgfkeys helper) or extend which nodes are in its fit=(...) list"},
+      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role (not a single instance) in that role's style definition; keep intrabus=Orange, interbus=NavyBlue-dashed, core=Aquamarine, process=NavyBlue, parameters=ForestGreen unless the family's settled-decisions record says otherwise (see cp-4856 note: this template has no settled-decisions record of its own yet — it is a PoC graft, not the shipped Phase-1 component library)"}
+    ],
+    "invariants": [
+      "each tile's boundary fit node must be declared after all nodes it fits, inside an on-background-layer scope, so it sits behind them",
+      "preserve semantic node names; give new components clear role-based names with a tile-index suffix",
+      "colors encode role/domain semantics (core/process/parameters/terminal/intrabus/interbus), not decoration — do not introduce a color that is not tied to a role, and do not reuse opentikz's otblue/otorange/otteal/otpurple/otgray names for these roles (palette collision — see learnings note)",
+      "the inter-tile bus is always dashed and the intra-tile bus is always solid — this distinction is load-bearing (NoC/global vs. local/tile-internal), grafted from tikzsetup.tex's intrabus/interbus split"
+    ]
+  }
+}
