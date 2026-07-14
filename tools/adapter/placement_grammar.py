@@ -37,6 +37,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .derive import strip_tex_comments
 from .intent import IntentRecord
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -1058,7 +1059,20 @@ def _check_analog_digital_split(ctx: TemplateCtx) -> RuleResult:
             "analog-digital-split", NOT_APPLICABLE,
             "no digital-domain component/thesis reference in this template -- nothing to split",
         )
-    has_band = "\\domainband" in ctx.tex or "\\domainboundary" in ctx.tex
+    # Bug found via cp-4883 review, round 2 (cp-4896): a bare substring check
+    # for "\domainband"/"\domainboundary" ALSO matches a documentation
+    # comment showing the macro's call syntax (e.g. esl-crossbar-kcl-adc's
+    # own "%   \domainband{name}{color-token}{fitspec}{label}{anchor}" line)
+    # and the macro's OWN \newcommand definition site -- neither is a real
+    # invocation. Verified with a scratch copy that deletes the two
+    # \domainband{...} calls + the \domainboundary{...} call but leaves the
+    # \newcommand definitions and doc-comment in place: the old check still
+    # (wrongly) reported PASS. Fix: strip comments, then require the macro
+    # name be immediately followed by "{" (a real call's first argument) --
+    # the \newcommand{\domainband}[5]{...} definition site has "}" right
+    # after the name, not "{", so it never matches this pattern.
+    code_only = strip_tex_comments(ctx.tex)
+    has_band = bool(re.search(r"\\domainband\{", code_only)) or bool(re.search(r"\\domainboundary\{", code_only))
     if has_band:
         return RuleResult("analog-digital-split", PASS, "domain-band + domain-boundary macros present")
     return RuleResult(
