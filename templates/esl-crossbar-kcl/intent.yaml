@@ -1,0 +1,90 @@
+# Intent Record — esl-crossbar-kcl
+#
+# Per-figure design record (contract §4 shape; ADR-0005 D3 §4 row). Sidecar
+# owned by the backend-adapter, not by opentikz metadata (D2). `entities[]`
+# and the top-level `parameters` list are adapter extensions on top of the
+# contract's base §4 shape (see tools/adapter/intent.py). Commit beside
+# template.tex; validated by tools/adapter/checks.py in the verify loop.
+
+slug: esl-crossbar-kcl
+family: circuit-schematic
+subject: >-
+  Analog in-memory-compute crossbar readout: a 2x2 weight-cell array driven
+  by row voltage sources, with per-column KCL current summation feeding a
+  real circuitikz device readout stage.
+thesis: >-
+  Many analog per-cell currents reduce to ONE physical KCL summation node per
+  column before any readout device sees them — the column, not the cell, is
+  the unit of analog accumulation.
+visual_argument: >-
+  Two voltage-source rows fan into a 2x2 cell grid; every column's cells
+  converge on one KCL node below it, and only from that single node does a
+  real device symbol (sense resistor / reference current) branch off, making
+  "summation happens before readout" visually unambiguous.
+
+entities:
+  - name: row voltage sources
+    role: analog input activations driving each row
+    component: v-source
+    nodes: [v1, v2]
+  - name: crossbar weight cells
+    role: the 2x2 VMM weight-cell array
+    component: crossbar-cell
+    nodes: [g11, g21, g12, g22]
+  - name: per-column KCL summation node
+    role: physical node collecting a column's analog current
+    component: kcl-node
+    nodes: [k1, k2]
+  - name: readout-device branch
+    role: >-
+      the real circuitikz device symbol (sense resistor / reference current
+      source) each KCL node's column current branches into — contract §1a
+      names conceptual components (crossbar-cell, kcl-node, adc, ...) but not
+      raw EE device primitives (resistor/current-source); these are treated
+      as backend-private circuitikz realization detail (contract §5), not a
+      missing §1 component, so no `component:` mapping is claimed here.
+    nodes: [k1out, k2out]
+
+relationships:
+  - from: row voltage sources
+    to: crossbar weight cells
+    carries: row voltage (blue, vwire)
+  - from: crossbar weight cells
+    to: per-column KCL summation node
+    carries: analog cell current (orange, awire)
+  - from: per-column KCL summation node
+    to: readout-device branch
+    carries: column current I_j into the readout device
+
+check_questions:
+  - Can the reader see that all cells in one column feed the SAME KCL node?
+  - Is it clear the readout device is downstream of the summation, not upstream?
+  - Do wire colors distinguish the voltage-source input (blue) from the analog summed current (orange)?
+
+provenance:
+  sources:
+    - figstyle.tex conventions (analog-ai EmbML-HB-2026-Ch-AnalogEDAI, grafted, not forked)
+  constraints: []
+
+# --- adapter extension: "what varies" (edit_contract.parameters source) --- #
+parameters:
+  - name: "\\rowgap"
+    type: length-cm
+    meaning: vertical gap between input rows
+    default: "1.1"
+  - name: "\\colgap"
+    type: length-cm
+    meaning: horizontal gap between columns
+    default: "1.6"
+  - name: "\\vinonelabel"
+    type: text
+    meaning: row 1 voltage-source label
+  - name: "\\vintwolabel"
+    type: text
+    meaning: row 2 voltage-source label
+  - name: "\\kcllabel"
+    type: text
+    meaning: KCL summation-node glyph (shared across columns)
+  - name: "\\outcollabel"
+    type: text
+    meaning: final output-current label
