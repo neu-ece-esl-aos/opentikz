@@ -13,13 +13,33 @@ compile  ->  render to PNG  ->  READ THE PNG  ->  check against the checklist be
 
 ## Why this exists
 
-`validate.py --strict` proves a `.tex` **compiles**. It does not prove the
-figure is **legible**. The PoC `esl-crossbar-kcl` template (ported into this
-fork with its defect intact, see `templates/esl-crossbar-kcl/`) is the
-motivating case: it passed `validate.py --strict` at every revision while it
-visually collided (see "Demonstrated catch" below, now fixed by WP-5/cp-4894)
-— a defect only the rendered image revealed. A verify loop that stops at "it
-compiles" is not sufficient (ADR-0004 §D2; ADR-0005 §D6).
+figure is **legible**. Two motivating failures, both real, both in this
+fork's own history:
+
+- The PoC `esl-crossbar-kcl` template (ported into this fork with its defect
+  intact, see `templates/esl-crossbar-kcl/`) passed `validate.py --strict` at
+  every revision while it visually collided (see "Demonstrated catches"
+  below, now fixed by WP-5/cp-4894) — a symbol overlap only the rendered
+  image revealed.
+- **WP-4's 32-tile MPSoC render (cp-4892, PR #2) was reviewed by three
+  separate agent passes, and all three declared it clean** — while it had a
+  tile corner-label drawn on top of its PE node and a diagonal intra-tile bus
+  edge, both reproducing at every tile. The coordinator caught both, not by
+  re-reading the same full-figure thumbnail a fourth time, but by **cropping
+  a single tile and enlarging it to 900%**: at thumbnail scale (602×1038 px
+  for 32 tiles) the defect is physically invisible; at 900% it is
+  unmistakable. This is the harder lesson — **"render a PNG and have the
+  agent look at it" is not sufficient by itself.** It failed in two distinct
+  ways: a *resolution* failure (the defect was there but too small to see)
+  and a *reclassification* failure (an agent that did notice an anomaly
+  talked itself out of calling it a defect: "cosmetic", "by design",
+  "acceptable at this density"). Both are closed below — forcing resolution
+  (the zoomed-crop requirement) and removing discretion (the
+  no-reclassification rule).
+
+A verify loop that stops at "it compiles" is not sufficient (ADR-0004 §D2;
+ADR-0005 §D6), and neither is one that stops at "an agent glanced at a
+full-figure thumbnail."
 
 ## The checklist (read the PNG against every item)
 
@@ -53,6 +73,43 @@ compiles" is not sufficient (ADR-0004 §D2; ADR-0005 §D6).
 Items 1-4 are the label/symbol-collision class D6 exists to close (grounded
 directly in the cp-4856 crossbar failure). Item 5 is legibility. Item 6 is the
 semantic gate the contract requires.
+
+### No reclassification — read this before you check anything off
+
+**A collision is a collision.** If a label's bounding box overlaps a node it
+is not the content of, that IS checklist item 3, full stop. Permitted
+verdicts for a genuine overlap are exactly two: "fix it" or "this is an
+explicit, recorded, coordinator-approved exception" (a `selfcheck` opt-out in
+the item's `meta.json`, see below — committed, reviewable, never a runtime
+agent decision). The following are **not** permitted verdicts, because all
+three were actually used, on this fork, to wave away a real defect:
+
+- "cosmetic" / "a minor imperfection"
+- "acceptable at this density/scale"
+- "by design" (without an actual recorded design decision to point to)
+
+If an overlap is genuinely intended (e.g. a `fit` background meant to sit
+behind its own contents), that is a **containment** relationship, not a
+collision, and the mechanical checks below already know the difference (see
+`detect_node_node_collisions`'s `containment_ratio`). Anything short of full
+containment is a collision. Do not grade your own homework.
+
+### Force the resolution — a full-figure thumbnail is not evidence
+
+A full-page render of a dense figure (many tiles, a large array) can hide a
+defect that is obvious once you crop and zoom. **Whenever you inspect a
+multi-element figure (an array, a grid, anything with more than a handful of
+repeated components), commit a zoomed crop (≥400%) of at least one
+representative unit as part of your evidence** — not only the full-figure
+PNG. A full-page thumbnail is evidence the figure exists; it is **not**
+evidence the figure is collision-free at the density it's drawn at. See
+`docs/gate-demo/` for the pattern: every demonstrated catch below ships both
+a full render and a zoomed crop.
+
+```bash
+# recipe used throughout docs/gate-demo/
+convert <full.png> -crop <W>x<H>+<X>+<Y> +repage -resize 400% <zoom.png>
+```
 
 ## What is mechanical vs. what needs your eyes — be honest about this split
 
