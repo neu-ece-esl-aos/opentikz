@@ -58,3 +58,38 @@ Everything under `contract/` is a **read-only, checksum-pinned vendor copy**
 of the frozen Phase-1 backend contract — see `contract/CONTRACT.md` for the
 source of truth, the pin, and the change-control rule. This fork consumes
 that contract; it never edits it.
+
+## CI logic convention: `tools/ci/`, never `.github/workflows/`
+
+**Do not add CI logic to `.github/workflows/ci.yml`.** The credential these
+agent sessions push with carries `repo`/`read:org` scopes but not GitHub's
+`workflow` scope, which GitHub requires for *any* push that touches a file
+under `.github/workflows/` — so a commit that edits the workflow file cannot
+land without an operator manually running `gh auth refresh -s workflow`
+(interactive, browser-based; not something an agent can do on the operator's
+behalf). Since several later work packages land CI logic (WP-3 palette-drift
+check, WP-8 render/PNG self-check gate, WP-9 conformance test), routing all of
+it through the workflow file would hit this wall repeatedly.
+
+Instead, `ci.yml` is a **thin, generic shim** with one step:
+
+```yaml
+- name: Run CI checks (tools/ci/*.sh)
+  run: |
+    set -euo pipefail
+    for script in tools/ci/*.sh; do
+      echo "::group::$script"
+      "$script"
+      echo "::endgroup::"
+    done
+```
+
+Every check is a standalone, executable script under `tools/ci/`
+(`validate-all.sh`, `check-contract-checksum.sh`, `render-all.sh`, ...),
+runnable both in CI and locally (`./tools/ci/validate-all.sh`). **A later work
+package that needs a new CI gate adds a new `tools/ci/*.sh` script and nothing
+else** — the shim picks it up automatically, sorted by filename, with no edit
+to `ci.yml` and therefore no `workflow` scope required. Only touch `ci.yml`
+itself for things that are inescapably workflow-level (a new system
+dependency for the TeX Live install, a trigger/branch change) — and expect
+that one commit to need the operator's scope grant to land.
