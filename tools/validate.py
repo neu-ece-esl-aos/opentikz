@@ -35,7 +35,7 @@ from _common import iter_meta_files, load_json, rel, repo_root, tex_sibling
 SCHEMA_NAME = "meta.schema.json"
 
 # --- .tex static analysis ------------------------------------------------- #
-_DOCCLASS_RE = re.compile(r"\\documentclass\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}")
+_DOCCLASS_RE = re.compile(r"\\documentclass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}")
 _TIKZLIB_RE = re.compile(r"\\usetikzlibrary\s*\{([^}]*)\}")
 _USEPKG_RE = re.compile(r"\\usepackage\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}")
 
@@ -64,7 +64,8 @@ def _scan_tex(tex: Path) -> tuple[str | None, set[str], set[str]]:
     """Return (documentclass, tikz libraries, \\usepackage names) used by a .tex."""
     text = _strip_tex_comments(tex.read_text(encoding="utf-8"))
     m = _DOCCLASS_RE.search(text)
-    docclass = m.group(1).strip() if m else None
+    docclass_opts = m.group(1) if m else None
+    docclass = m.group(2).strip() if m else None
 
     def _items(groups: list[str]) -> set[str]:
         names: set[str] = set()
@@ -77,6 +78,12 @@ def _scan_tex(tex: Path) -> tuple[str | None, set[str], set[str]]:
 
     libs = _items(_TIKZLIB_RE.findall(text))
     pkgs = _items(_USEPKG_RE.findall(text))
+    # `\documentclass[tikz]{standalone}` (the circuitikz/standalone idiom) loads
+    # tikz via a class option rather than `\usepackage{tikz}` — register it as
+    # provided so `requires` doesn't need "tikz" hand-added per template (cp-4856;
+    # ADR-0005 D4).
+    if docclass_opts:
+        pkgs |= _items([docclass_opts])
     return docclass, libs, pkgs
 
 
