@@ -30,13 +30,13 @@
       {"id": "toggle-kcl", "summary": "set \\showkcl to 0 to omit the per-column summation node while keeping the column rail (e.g. when only the array structure matters, not the readout stage)"},
       {"id": "thin-axis-labels", "summary": "raise \\edgelabelstride so only every Nth row/col gets an index annotation at the array's edge -- the first and last row/col are always labeled regardless of stride"},
       {"id": "add-readout-device", "summary": "as in esl-crossbar-kcl: declare a coordinate below a kcl-<c> node and draw a real circuitikz `to[...]` bipole to it -- this generator does not itself draw readout devices, it only produces the array + rails + KCL nodes for a downstream circuit template (WP-5) to attach them to"},
-      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role (cell/vsource/kclnode/awire/vwire) in that role's style definition; keep the esl-crossbar-kcl assignments (green=cell, blue=vsource/vwire, orange=kclnode/awire) unless a family settled-decisions record overrides it"}
+      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role by editing that role's \\colorlet binding at the top of the file (inputdomain/weightdomain/analogdomain/digitaldomain) -- never a raw color name inline in a style; keep the esl-crossbar-kcl assignments (weightdomain=green for cell, inputdomain=blue for vsource/vwire, analogdomain=orange for kclnode/awire) unless a family settled-decisions record overrides it"}
     ],
     "invariants": [
       "row/column wiring is drawn as ONE colinear rail per row (vin-<r> through cell-<r>-<ncols>) and ONE colinear rail per column (cell-1-<c> through cell-<nrows>-<c> or kcl-<c>) -- never point-to-point per cell, which would be both O(rows*cols) edges and a visually incorrect crossbar reading at scale",
       "above roughly 10x10-15x15 cells, set \\celllabelmode to \"none\" and raise \\edgelabelstride -- per-cell subscript text and a numeric label on every row/column both collide or become unreadable at higher densities; verified by rendering to PNG before shipping any array this size (ADR-0005 D6). Cell identity/addressability never depends on the printed label, only on the node name",
       "the two-index node-naming stays row-then-col and 1-based at any array size: cell-<r>-<c>, never renumbered or collapsed when the array resizes",
-      "colors encode role/domain semantics (cell=weight, vsource/vwire=input, kclnode/awire=analog-current), not decoration -- do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
+      "colors are bound only through the ESL domain-semantic \\colorlet tokens declared at the top of the file (inputdomain/weightdomain/analogdomain/digitaldomain, contract §2/ADR-0005 D7) -- never a raw stock-xcolor name or inline hex inside a style definition (tools/validate.py enforces this); do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
     ]
   }
 }
