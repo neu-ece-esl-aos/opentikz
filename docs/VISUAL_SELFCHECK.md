@@ -233,22 +233,27 @@ clearance from the start; its own render evidence is
 `docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-readout-band-zoom.png`
 (600 DPI crop, ~6x a 96 DPI baseline reading size).
 
-### `esl-mpsoc-memory-hierarchy` — label-over-node, caught mechanically
+### `esl-mpsoc-memory-hierarchy` — label-over-node, caught mechanically (now fixed)
 
 Coordinator review (cp-4883) surfaced a live regression in WP-4's
 `\foreach`-generator output: a tile's corner label drawn on top of its own
 contained PE node, in 3 of 3 tiles, invisible at thumbnail scale across three
 separate agent visual-inspection passes. `detect_node_node_collisions` now
 catches this class of defect **mechanically** — no agent judgment required.
-Running it against the *sibling* template `esl-mpsoc-memory-hierarchy`
-(same generator lineage, not previously known to have this defect) found a
+Running it against the *sibling* template `esl-mpsoc-memory-hierarchy` (same
+generator lineage, not previously known to have this defect) found a
 **live, previously-undiscovered instance**: `python3 tools/validate.py
---strict` fails with `node 'pe-1-1' and node 'tikz@f@1' bounding boxes
+--strict` failed with `node 'pe-1-1' and node 'tikz@f@1' bounding boxes
 overlap 49%...` for all 3 of its tiles. Reading the render
-(`docs/gate-demo/esl-mpsoc-memory-hierarchy-full.png`, zoomed crop:
-`docs/gate-demo/esl-mpsoc-memory-hierarchy-collision-zoom.png`) confirms it:
-"T1" is drawn directly on top of PE node "1". Reported to cp-4883 and to
-whichever WP owns this template — not fixed here, per this task's scope.
+(`docs/gate-demo/esl-mpsoc-memory-hierarchy-full.png`, committed evidence of
+the *original defect*; zoomed crop:
+`docs/gate-demo/esl-mpsoc-memory-hierarchy-collision-zoom.png`) confirmed it:
+"T1" was drawn directly on top of PE node "1". Reported to cp-4883 and to
+WP-6 (cp-4895, which owns this template); **fixed by WP-6** in the same
+follow-up that addressed the coordinator's PR #6 review (orthogonal bus +
+label-clearance fixes) — `python3 tools/render_selfcheck.py
+templates/esl-mpsoc-memory-hierarchy` is clean on the current `dev`, and the
+committed evidence PNGs above are kept as the motivating pre-fix example.
 (The overlapping node's name — `tikz@f@N` — is TikZ's own auto-generated
 name for an anonymous node, not a bug in the check: this repo's corner
 labels are placed without an explicit `(name)`, and TikZ still names and

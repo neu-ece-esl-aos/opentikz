@@ -275,7 +275,7 @@ def _extract_node_bboxes_texframe(log: str) -> dict[str, tuple[float, float, flo
 def detect_node_node_collisions(
     node_boxes_texframe: dict[str, tuple[float, float, float, float]],
     min_ratio: float = 0.40,
-    containment_ratio: float = 0.90,
+    containment_ratio: float = 0.80,
 ) -> list[str]:
     """Flag two named nodes (or nodes and labels -- see module docstring)
     whose bounding boxes partially overlap.
