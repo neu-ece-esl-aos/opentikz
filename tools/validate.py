@@ -32,8 +32,10 @@ import tempfile
 from pathlib import Path
 
 from _common import iter_meta_files, load_json, rel, repo_root, tex_sibling
+from render_selfcheck import DEFAULT_DPI, detect_overfull, detect_text_overlaps, render_png
 
 SCHEMA_NAME = "meta.schema.json"
+SELFCHECK_PNG_DIR = "_selfcheck-pngs"  # gitignored; CI's PNG-self-check-gate output
 
 # --- .tex static analysis ------------------------------------------------- #
 _DOCCLASS_RE = re.compile(r"\\documentclass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}")
@@ -201,8 +203,18 @@ def _latex_available() -> bool:
     return shutil.which("latexmk") is not None
 
 
-def _compile_tex(tex: Path) -> tuple[bool, str]:
-    """Compile a standalone .tex with latexmk in a temp dir. Returns (ok, log)."""
+def _compile_tex(
+    tex: Path, selfcheck_png: Path | None = None
+) -> tuple[bool, str, list[str]]:
+    """Compile a standalone .tex with latexmk in a temp dir.
+
+    Returns ``(ok, log, selfcheck_problems)``. When ``selfcheck_png`` is given
+    and the compile succeeds, also runs the D6 visual-self-check gate's
+    *mechanical* half (ADR-0005 §D6; docs/VISUAL_SELFCHECK.md) against the
+    compiled PDF -- overfull/underfull box warnings and cross-label text-bbox
+    overlap -- and rasterizes a PNG to ``selfcheck_png`` for the agent (or a
+    human) to read, which is the half these mechanical checks CANNOT replace.
+    """
     with tempfile.TemporaryDirectory(prefix="opentikz-build-") as tmp:
         proc = subprocess.run(
             [
@@ -217,8 +229,17 @@ def _compile_tex(tex: Path) -> tuple[bool, str]:
             capture_output=True,
             text=True,
         )
-        ok = proc.returncode == 0 and (Path(tmp) / (tex.stem + ".pdf")).exists()
-        return ok, (proc.stdout + proc.stderr)
+        log = proc.stdout + proc.stderr
+        pdf = Path(tmp) / (tex.stem + ".pdf")
+        ok = proc.returncode == 0 and pdf.exists()
+        if not ok or selfcheck_png is None:
+            return ok, log, []
+
+        problems = detect_overfull(log)
+        problems += detect_text_overlaps(pdf)
+        selfcheck_png.parent.mkdir(parents=True, exist_ok=True)
+        render_png(pdf, selfcheck_png.with_suffix(""), dpi=DEFAULT_DPI)
+        return ok, log, problems
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -233,6 +254,16 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="only validate metadata; never attempt to compile .tex.",
     )
+    parser.add_argument(
+        "--no-render-selfcheck",
+        action="store_true",
+        help=(
+            "skip the D6 visual-self-check gate's mechanical half (PNG render + "
+            "overfull-box / text-overlap detection). Does NOT skip the compile "
+            "check -- only the render+mechanical-check step on top of it. Use "
+            "for fast local metadata iteration; CI always runs it."
+        ),
+    )
     args = parser.parse_args(argv)
 
     root = repo_root()
@@ -240,8 +271,16 @@ def main(argv: list[str] | None = None) -> int:
 
     have_latex = _latex_available()
     do_compile = not args.no_compile
+    do_selfcheck = do_compile and not args.no_render_selfcheck
     if do_compile and not have_latex and not args.strict:
         print("note: latexmk not found; .tex compilation will be SKIPPED")
+    if do_selfcheck:
+        print(
+            f"note: D6 visual-self-check PNGs will be written under "
+            f"{SELFCHECK_PNG_DIR}/ -- mechanical checks only (overfull boxes, "
+            "text-bbox overlap); READ THE PNGS for the semantic half "
+            "(docs/VISUAL_SELFCHECK.md)."
+        )
 
     n_pass = n_fail = n_skip = 0
     failures: list[str] = []
@@ -317,11 +356,13 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"SKIP  {item}: latexmk not found")
                 n_skip += 1
             continue
-        ok, log = _compile_tex(tex)
-        if ok:
-            print(f"PASS  {item}")
-            n_pass += 1
-        else:
+        selfcheck_png = (
+            (root / SELFCHECK_PNG_DIR / (item.replace("/", "_") + ".png"))
+            if do_selfcheck
+            else None
+        )
+        ok, log, selfcheck_problems = _compile_tex(tex, selfcheck_png)
+        if not ok:
             print(f"FAIL  {item}: standalone compile failed")
             tail = "\n".join(log.strip().splitlines()[-15:])
             print("        --- latexmk output (tail) ---")
@@ -329,6 +370,20 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"        {line}")
             n_fail += 1
             failures.append(item)
+        elif selfcheck_problems:
+            print(f"FAIL  {item}: D6 visual-self-check gate (mechanical) — {selfcheck_png and rel(selfcheck_png, root)}")
+            for p in selfcheck_problems:
+                print(f"        - {p}")
+            print(
+                "        NOTE: passing this mechanical check is NOT sufficient -- "
+                "an agent must still read the PNG against the checklist "
+                "(docs/VISUAL_SELFCHECK.md) before delivering."
+            )
+            n_fail += 1
+            failures.append(item)
+        else:
+            print(f"PASS  {item}")
+            n_pass += 1
 
     # --- vendored contract checksum (not a catalog item; runs once per invocation) ---
     contract_file = root / "contract" / "backend-contract-v1.2.0.md"

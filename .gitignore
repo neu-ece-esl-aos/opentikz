@@ -46,3 +46,11 @@ site/
 # NOTE: generated previews (*.svg) and catalog.json are COMMITTED on purpose
 # (the website serves CI-rendered previews), so they are intentionally NOT
 # ignored here.
+
+# D6 visual-self-check gate output (tools/render_selfcheck.py, validate.py):
+# per-template render used for the agent/CI PNG read. Regenerated on every
+# validate.py run; not shipped content (unlike the catalog *.svg above).
+# (docs/gate-demo/*.png is the deliberate exception -- committed evidence, not
+# a regenerable render -- see docs/VISUAL_SELFCHECK.md.)
+_selfcheck-pngs/
+*.selfcheck.png

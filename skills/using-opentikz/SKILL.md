@@ -88,12 +88,27 @@ say the word to change any."*
      `invariant`; preserve the `node_naming` scheme; colours via palette names only.
      For an **icon/example** (no contract), edit under the same hard rules.
    - **Mode B:** edit the item in place inside the repo, under the same rules.
-5. **Verify by compiling — in the user's project (Mode A).** Run the user's LaTeX on
-   the copied/edited file (`latexmk -pdf <file>.tex`, or `pdflatex`). Fix failures
-   before returning — never hand back a figure you didn't compile. (Regenerating
-   `.svg` previews and `catalog.json` is a *Mode B / contributor* task — skip it
-   when producing a figure for a user.)
-6. **Deliver.** Return the edited `.tex` and the one-line assumptions summary.
+5. **Verify — compile, then render, then look (mandatory, blocking).**
+   Compiling is necessary but **not sufficient**: `esl-crossbar-kcl`, one of
+   this library's own templates, compiles cleanly today and still has a
+   visible symbol collision (see `docs/VISUAL_SELFCHECK.md`) — a figure that
+   compiles but renders illegibly must not be delivered.
+   1. Run the user's LaTeX on the copied/edited file (`latexmk -pdf
+      <file>.tex`, or `pdflatex`). Fix failures before proceeding — never
+      render a figure that doesn't compile.
+   2. Render it to a PNG at print resolution (≥300dpi):
+      `pdftoppm -png -r 300 <file>.pdf <file>` (or, inside this repo,
+      `python3 tools/render_selfcheck.py <path>` — see §6 for Mode B).
+   3. **Read the PNG** (the Read tool, or equivalent) and check it against
+      every item of the checklist in `docs/VISUAL_SELFCHECK.md`: label/symbol
+      collisions, labels contained in their nodes, edges not crossing
+      unrelated nodes, legibility at the figure's intended print size, and
+      (if the figure has an intent record) its `check_questions` answered
+      from the render alone.
+   4. Any problem found → fix and re-run this step. Only proceed to deliver
+      once every checklist item is clear.
+6. **Deliver.** Return the edited `.tex`, confirm the visual self-check passed,
+   and give the one-line assumptions summary.
 
 ## 3. Hard rules (never violate)
 
@@ -153,6 +168,9 @@ reduce content/spacing (the template's spacing parameters) and resize the rest.
 - `reference/annotations/` — how to add callouts, braces, and highlight labels.
 - `reference/layout/` — positioning, alignment, and spacing patterns.
 - `docs/DESIGN_GUIDE.md` — global conventions (line width, node naming, metadata).
+- `docs/VISUAL_SELFCHECK.md` — the visual self-check gate's full checklist,
+  what's mechanically checked vs. what needs your eyes, and a demonstrated
+  catch. Required reading before step 5/§6's verify step.
 
 ## 6. Mode B procedure — contributing back (editing the repo itself)
 
@@ -161,7 +179,18 @@ their paper), the repo tooling applies:
 
 - regenerate the preview: `python3 tools/render_preview.py <file>.tex -o <dir>/preview.svg`
 - regenerate the catalog: `python3 tools/build_catalog.py`
-- validate: `python3 tools/validate.py --strict`
+- validate: `python3 tools/validate.py --strict` — this also runs the D6
+  visual-self-check gate's mechanical checks (compile + render to PNG under
+  `_selfcheck-pngs/` + overfull-box / text-overlap detection) on every item.
+  **Passing it is not the same as passing the gate.** Before committing, run
+  `python3 tools/render_selfcheck.py <item-dir>` (or read the PNG
+  `validate.py` already wrote under `_selfcheck-pngs/`) and check it against
+  every item in `docs/VISUAL_SELFCHECK.md` — the mechanical checks cannot see
+  symbol/graphic overlaps (only text), cannot check label containment, and
+  cannot judge legibility or the intent record's `check_questions`. A
+  template that mechanically passes `validate.py` but fails this read must
+  not be committed; see `docs/VISUAL_SELFCHECK.md`'s "Demonstrated catch" for
+  a live example in this repo (`esl-crossbar-kcl`).
 - a new/edited template needs an `edit_contract` in its `meta.json` (see §4 of
   `docs/DESIGN_GUIDE.md`); `validate.py` checks its parameters/styles exist in the
   `.tex`.
