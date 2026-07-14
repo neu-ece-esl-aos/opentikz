@@ -98,9 +98,16 @@ say the word to change any."*
 ## 3. Hard rules (never violate)
 
 - The `.tex` must stay **standalone-compilable** (`\documentclass{standalone}`).
-- **Colors only via the five palette names** (`otblue otorange otteal otpurple
-  otgray`); tints/shades like `otblue!15` are fine. Never inline a hex value or a
-  stock xcolor name (`blue`, `red`). See `reference/color-palettes/`.
+- **Colors only via a palette name** — the five upstream names (`otblue otorange
+  otteal otpurple otgray`) **or** an ESL domain-semantic token bound to a
+  per-family settled decision (`inputdomain weightdomain digitaldomain
+  analogdomain intra-bus inter-bus core-accent process-accent param-accent`,
+  ADR-0005 §D7); tints/shades like `otblue!15` or `analogdomain!70!black` are
+  fine on either set. Never inline a hex value or a stock xcolor/dvipsnames name
+  (`blue`, `red`, `Aquamarine`). See `reference/color-palettes/` — the two sets
+  are **not** interchangeable: don't force an ESL-family figure's settled
+  domain color onto the five `ot*` names, and don't invent a tenth ad-hoc token
+  outside either set. `tools/validate.py` rejects raw hues in templates.
 - **Preserve node names / the `node_naming` scheme** — they are the contract that
   lets edits target the right parts. Give any new node a clear semantic name.
 - **Keep figures parametric** — drive counts/spacing/labels through the `\def`
@@ -149,7 +156,8 @@ reduce content/spacing (the template's spacing parameters) and resize the rest.
 ## 5. Reference material
 
 - `reference/color-palettes/` — the canonical five-color Okabe-Ito palette (light
-  + dark blocks), the single source of truth for colors.
+  + dark blocks) **plus** the ESL domain-semantic token extension (ADR-0005 §D7)
+  for circuit/architecture figure families; the single source of truth for colors.
 - `reference/annotations/` — how to add callouts, braces, and highlight labels.
 - `reference/layout/` — positioning, alignment, and spacing patterns.
 - `docs/DESIGN_GUIDE.md` — global conventions (line width, node naming, metadata).
