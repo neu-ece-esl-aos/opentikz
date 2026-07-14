@@ -5,10 +5,16 @@
 \usepackage{tikz}
 \usetikzlibrary{calc, arrows.meta}
 
-% --- palette: analog-ai domain-semantic scheme (NOT opentikz's ot* palette) ---
-% Same role/color assignments as esl-crossbar-kcl (blue=input/activation,
-% green=analog weight cell, orange=analog current/summation) so a
-% \foreach-generated array reads as the same family, not a different figure.
+% --- palette: ESL domain-semantic tokens (contract §2, ADR-0005 D7 -- extends
+% opentikz's ot* palette, does not remap onto it; see
+% reference/color-palettes/color-palettes.md "ESL domain-semantic tokens").
+% Same token bindings as esl-crossbar-kcl (inputdomain=blue, weightdomain=green,
+% analogdomain=orange, digitaldomain=gray) so a \foreach-generated array reads
+% as the same family, not a different figure.
+\colorlet{inputdomain}{blue}     % inputs / activations (row voltage sources)
+\colorlet{weightdomain}{green}   % analog weight cells
+\colorlet{analogdomain}{orange}  % analog current / accumulation (KCL, rails)
+\colorlet{digitaldomain}{gray}   % neutral axis/index annotation
 
 \begin{document}
 % ==== parameters (edit these; this is the \foreach generator's parameter surface —
@@ -27,16 +33,16 @@
 \begin{tikzpicture}[
     font=\small,
     >=Stealth,
-    cell/.style={draw, rectangle, thick, fill=green!15,
+    cell/.style={draw, rectangle, thick, fill=weightdomain!15,
                  minimum size=\cellsize cm, inner sep=0pt, font=\tiny},
-    vsource/.style={draw=blue!55, circle, line width=0.8pt, fill=blue!18,
-                    text=black, minimum size=\cellsize cm, inner sep=0pt,
+    vsource/.style={draw=inputdomain!55, circle, line width=0.8pt, fill=inputdomain!18,
+                    minimum size=\cellsize cm, inner sep=0pt,
                     font=\tiny\itshape},
-    kclnode/.style={draw, circle, thick, fill=orange!35,
+    kclnode/.style={draw, circle, thick, fill=analogdomain!35,
                     minimum size=\cellsize cm, inner sep=0pt, font=\tiny},
-    awire/.style={orange!80!black, thick},
-    vwire/.style={blue!60!black, thick},
-    axislbl/.style={font=\tiny, gray!40!black},
+    awire/.style={analogdomain!80!black, thick},
+    vwire/.style={inputdomain!60!black, thick},
+    axislbl/.style={font=\tiny, digitaldomain!40!black},
   ]
 
   % legibility sentinel: \celllabelmode is compared against this literal.

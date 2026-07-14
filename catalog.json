@@ -2234,7 +2234,7 @@
         "row/column wiring is drawn as ONE colinear rail per row (vin-<r> through cell-<r>-<ncols>) and ONE colinear rail per column (cell-1-<c> through cell-<nrows>-<c> or kcl-<c>) -- never point-to-point per cell, which would be both O(rows*cols) edges and a visually incorrect crossbar reading at scale",
         "above roughly 10x10-15x15 cells, set \\celllabelmode to \"none\" and raise \\edgelabelstride -- per-cell subscript text and a numeric label on every row/column both collide or become unreadable at higher densities; verified by rendering to PNG before shipping any array this size (ADR-0005 D6). Cell identity/addressability never depends on the printed label, only on the node name",
         "the two-index node-naming stays row-then-col and 1-based at any array size: cell-<r>-<c>, never renumbered or collapsed when the array resizes",
-        "colors encode role/domain semantics (cell=weight, vsource/vwire=input, kclnode/awire=analog-current), not decoration -- do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
+        "colors are bound only through the ESL domain-semantic \\colorlet tokens declared at the top of the file (inputdomain/weightdomain/analogdomain/digitaldomain, contract §2/ADR-0005 D7) -- never a raw stock-xcolor name or inline hex inside a style definition (tools/validate.py enforces this); do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
       ],
       "node_naming": "generated, index-addressable, 1:1 with contract §1a: cell-<r>-<c> is a crossbar-cell (contract component `crossbar-cell`), 1-based row,col over the \\nrows x \\ncols array -- together the array IS the contract's `crossbar-array` (\"a full nrows x ncols VMM cell array, placed by row/col index\"); vin-<r> is a v-source (contract component `v-source`), 1-based row index; kcl-<c> is a kcl-node (contract component `kcl-node`), 1-based column index, present only when \\showkcl=1. This replaces esl-crossbar-kcl's fixed concatenated-digit naming (g11, g21, ...), which is ambiguous once row or col exceeds 9 -- coordinate with the WP-2 adapter's node_naming derivation (cp-4890) on which scheme becomes the family-wide convention before both templates diverge permanently.",
       "operations": [
@@ -2260,7 +2260,7 @@
         },
         {
           "id": "recolor-role",
-          "summary": "change the domain-semantic color for a whole role (cell/vsource/kclnode/awire/vwire) in that role's style definition; keep the esl-crossbar-kcl assignments (green=cell, blue=vsource/vwire, orange=kclnode/awire) unless a family settled-decisions record overrides it"
+          "summary": "change the domain-semantic color for a whole role by editing that role's \\colorlet binding at the top of the file (inputdomain/weightdomain/analogdomain/digitaldomain) -- never a raw color name inline in a style; keep the esl-crossbar-kcl assignments (weightdomain=green for cell, inputdomain=blue for vsource/vwire, analogdomain=orange for kclnode/awire) unless a family settled-decisions record overrides it"
         }
       ],
       "parameters": [
@@ -2492,7 +2492,7 @@
         "node names stay index-addressable at any grid size: tile-<r>-<c> and pe-<r>-<c>-<k>, never renumbered or collapsed when the grid resizes",
         "the inter-tile mesh only wires each tile to its immediate right/below neighbor (O(tiles) edges) -- never a full mesh (O(tiles^2)), which is both semantically wrong for a NoC and illegible past a handful of tiles",
         "above roughly 8-12 tiles, set \\pelabelmode to \"none\" -- per-PE numeric text at that density collides or becomes unreadable; verified by rendering to PNG **and reading it at zoom, not just a thumbnail glance** before shipping any array this size (ADR-0005 D6) -- a label sitting on a node can compile cleanly and still be invisible at a small preview size. PE identity/addressability never depends on the printed label, only on the node name",
-        "colors encode role/domain semantics (pe=core-accent, intrabus, interbus), not decoration -- do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
+        "colors are bound only through the ESL domain-semantic \\colorlet tokens declared at the top of the file (core-accent/intra-bus/inter-bus, contract §2/ADR-0005 D7) -- never a raw stock-xcolor/dvipsnames name or inline hex inside a style definition (tools/validate.py enforces this); do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
       ],
       "node_naming": "generated, index-addressable, 1:1 with contract §1b: tile-<r>-<c> is the tile/cluster container (contract component `tile`), 1-based row,col over the \\ntilerows x \\ntilecols grid; pe-<r>-<c>-<k> is a processing element (contract component `pe`) inside tile (r,c), 1-based flat index k (row-major) over that tile's \\pegridrows x \\pegridcols sub-grid. This extends esl-architecture-block's fixed \"role+tile-index\" naming (core1, acc1, ...) to full 2-D grid addressing so the same array-scale node can be targeted by (row,col[,k]) rather than a single flat suffix -- coordinate with the WP-2 adapter's node_naming derivation (cp-4890) before treating this as the family-wide convention.",
       "operations": [
@@ -2514,7 +2514,7 @@
         },
         {
           "id": "recolor-role",
-          "summary": "change the domain-semantic color for a whole role (pe/tilebox/intrabus/interbus) in that role's style definition; keep the esl-architecture-block assignments (Aquamarine=PE, Orange=intrabus, NavyBlue-dashed=interbus) unless a family settled-decisions record overrides it"
+          "summary": "change the domain-semantic color for a whole role by editing that role's \\colorlet binding at the top of the file (core-accent/intra-bus/inter-bus) -- never a raw color name inline in a style; keep the esl-architecture-block assignments (core-accent=Aquamarine, intra-bus=Orange, inter-bus=NavyBlue) unless a family settled-decisions record overrides it"
         }
       ],
       "parameters": [

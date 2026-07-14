@@ -5,10 +5,15 @@
 \usepackage{tikz}
 \usetikzlibrary{calc, backgrounds, fit, arrows.meta}
 
-% --- palette: ESL/tsarilp domain-semantic scheme (NOT opentikz's ot* palette) ---
-% Same role/color assignments as esl-architecture-block (core-accent=Aquamarine,
-% inter-bus=NavyBlue dashed, intra-bus=Orange) so a \foreach-generated array reads
-% as the same family, not a different visual language.
+% --- palette: ESL domain-semantic tokens (contract §2, ADR-0005 D7 -- extends
+% opentikz's ot* palette, does not remap onto it; see
+% reference/color-palettes/color-palettes.md "ESL domain-semantic tokens").
+% Same token bindings as esl-architecture-block (core-accent=Aquamarine,
+% inter-bus=NavyBlue dashed, intra-bus=Orange) so a \foreach-generated array
+% reads as the same family, not a different visual language.
+\colorlet{core-accent}{Aquamarine}   % PE fill/border accent
+\colorlet{intra-bus}{Orange}         % intra-tile interconnect
+\colorlet{inter-bus}{NavyBlue}       % inter-tile interconnect
 
 \begin{document}
 % ==== parameters (edit these; this is the \foreach generator's parameter surface —
@@ -36,11 +41,11 @@
 \begin{tikzpicture}[
     >=Stealth,
     pe/.style={draw, thick, rectangle, minimum size=\pesize cm, inner sep=0pt,
-      draw=Aquamarine!80!black, fill=Aquamarine!25, font=\tiny, align=center},
-    tilebox/.style={draw=Aquamarine!70!black, dashed, rounded corners=3pt},
-    tilelabel/.style={font=\scriptsize\bfseries, text=Aquamarine!55!black},
-    intrabus/.style={draw, Orange, thick},
-    interbus/.style={draw, NavyBlue, thick, dashed},
+      draw=core-accent!80!black, fill=core-accent!25, font=\tiny, align=center},
+    tilebox/.style={draw=core-accent!70!black, dashed, rounded corners=3pt},
+    tilelabel/.style={font=\scriptsize\bfseries, text=core-accent!55!black},
+    intrabus/.style={draw, intra-bus, thick},
+    interbus/.style={draw, inter-bus, thick, dashed},
     % --- fit-margins helper, grafted verbatim from tikzsetup.tex via
     % esl-architecture-block: a fit box needs MORE headroom above its
     % contents than on its other sides, so the corner label (drawn outside

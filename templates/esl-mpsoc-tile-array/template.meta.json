@@ -31,7 +31,7 @@
       {"id": "toggle-pe-labels", "summary": "set \\pelabelmode to \"none\" once the grid is large enough that per-PE index text would collide (see invariants); the PE's identity is still its node name, not its printed text"},
       {"id": "toggle-mesh", "summary": "set \\showmesh to 0 to omit the inter-tile NoC mesh entirely (e.g. when only containment/tile-array structure matters, not interconnect)"},
       {"id": "resize-spacing", "summary": "\\pesize/\\pegap for PE sizing and intra-tile density; \\tilegapx/\\tilegapy for inter-tile density"},
-      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role (pe/tilebox/intrabus/interbus) in that role's style definition; keep the esl-architecture-block assignments (Aquamarine=PE, Orange=intrabus, NavyBlue-dashed=interbus) unless a family settled-decisions record overrides it"}
+      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role by editing that role's \\colorlet binding at the top of the file (core-accent/intra-bus/inter-bus) -- never a raw color name inline in a style; keep the esl-architecture-block assignments (core-accent=Aquamarine, intra-bus=Orange, inter-bus=NavyBlue) unless a family settled-decisions record overrides it"}
     ],
     "invariants": [
       "each tile's fit box is declared after every PE node it fits, inside an on-background-layer scope, so it sits behind them (containment primitive, §3a)",
@@ -41,7 +41,7 @@
       "node names stay index-addressable at any grid size: tile-<r>-<c> and pe-<r>-<c>-<k>, never renumbered or collapsed when the grid resizes",
       "the inter-tile mesh only wires each tile to its immediate right/below neighbor (O(tiles) edges) -- never a full mesh (O(tiles^2)), which is both semantically wrong for a NoC and illegible past a handful of tiles",
       "above roughly 8-12 tiles, set \\pelabelmode to \"none\" -- per-PE numeric text at that density collides or becomes unreadable; verified by rendering to PNG **and reading it at zoom, not just a thumbnail glance** before shipping any array this size (ADR-0005 D6) -- a label sitting on a node can compile cleanly and still be invisible at a small preview size. PE identity/addressability never depends on the printed label, only on the node name",
-      "colors encode role/domain semantics (pe=core-accent, intrabus, interbus), not decoration -- do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
+      "colors are bound only through the ESL domain-semantic \\colorlet tokens declared at the top of the file (core-accent/intra-bus/inter-bus, contract §2/ADR-0005 D7) -- never a raw stock-xcolor/dvipsnames name or inline hex inside a style definition (tools/validate.py enforces this); do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
     ]
   }
 }
