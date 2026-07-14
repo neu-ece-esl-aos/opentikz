@@ -2063,7 +2063,7 @@
   },
   {
     "author": "cp-4856 PoC graft (grounded in tsarilp-pub doc/common/tikzsetup.tex, not a fork of that file)",
-    "description": "MPSoC-style tile/bus architecture figure: per-tile Core + Accelerator + config-register block joined by an intra-tile bus, two tiles joined by a dashed inter-tile NoC bus through a shared I/O terminal node. Colors are the ESL domain-semantic scheme (Aquamarine=core/compute, NavyBlue=datapath/interconnect, ForestGreen=config/parameters, gray=terminal/IO) grafted from tsarilp tikzsetup.tex, not opentikz's five-color ot* palette (see cp-4856 learnings note on the palette-invariant collision).",
+    "description": "MPSoC-style tile/bus architecture figure: per-tile Core + Accelerator + config-register block joined by an intra-tile bus, two tiles joined by a dashed inter-tile NoC bus through a shared I/O terminal node. Colors are the ESL domain-semantic tokens (contract §2, ADR-0005 D7): core-accent=core/compute (Aquamarine), process-accent=datapath/accelerator (NavyBlue), param-accent=config/parameters (ForestGreen), intra-bus=Orange, inter-bus=NavyBlue, digitaldomain=terminal/IO (gray) -- extending opentikz's five-color ot* palette, not remapped onto it (see reference/color-palettes/color-palettes.md and cp-4856 learnings note on the palette-invariant collision).",
     "domain": [
       "systems",
       "esl-architecture"
@@ -2072,7 +2072,7 @@
       "invariants": [
         "each tile's boundary fit node must be declared after all nodes it fits, inside an on-background-layer scope, so it sits behind them",
         "preserve semantic node names; give new components clear role-based names with a tile-index suffix",
-        "colors encode role/domain semantics (core/process/parameters/terminal/intrabus/interbus), not decoration — do not introduce a color that is not tied to a role, and do not reuse opentikz's otblue/otorange/otteal/otpurple/otgray names for these roles (palette collision — see learnings note)",
+        "colors encode role/domain semantics (core/process/parameters/terminal/intrabus/interbus) via the contract §2 palette tokens (core-accent/process-accent/param-accent/digitaldomain/intra-bus/inter-bus), not decoration — do not introduce a raw hex or stock xcolor/dvipsnames name (tools/validate.py rejects this), and do not force these roles onto opentikz's otblue/otorange/otteal/otpurple/otgray names (palette collision — see learnings note; ADR-0005 D7 extends the palette instead)",
         "the inter-tile bus is always dashed and the intra-tile bus is always solid — this distinction is load-bearing (NoC/global vs. local/tile-internal), grafted from tikzsetup.tex's intrabus/interbus split"
       ],
       "node_naming": "fixed semantic node names: (core1) (acc1) (cfg1) (tile1) (core2) (acc2) (cfg2) (tile2) (io); new per-tile components take a role-based name with the tile-index suffix (e.g. (mem1), (dma2))",
@@ -2103,7 +2103,7 @@
         },
         {
           "id": "recolor-role",
-          "summary": "change the domain-semantic color for a whole role (not a single instance) in that role's style definition; keep intrabus=Orange, interbus=NavyBlue-dashed, core=Aquamarine, process=NavyBlue, parameters=ForestGreen unless the family's settled-decisions record says otherwise (see cp-4856 note: this template has no settled-decisions record of its own yet — it is a PoC graft, not the shipped Phase-1 component library)"
+          "summary": "change the domain-semantic color for a whole role by re-binding that role's palette token (e.g. \\colorlet{core-accent}{...}), never by editing the role's style to a raw color; keep intrabus=intra-bus, interbus=inter-bus-dashed, core=core-accent, process=process-accent, parameters=param-accent unless the family's settled-decisions record says otherwise (see cp-4856 note: this template has no settled-decisions record of its own yet — it is a PoC graft, not the shipped Phase-1 component library)"
         }
       ],
       "parameters": [
@@ -2224,7 +2224,7 @@
   },
   {
     "author": "cp-4856 PoC graft (grounded in analog-ai EmbML-HB-2026-Ch-AnalogEDAI/fig/figstyle.tex, not a fork of that file)",
-    "description": "Analog in-memory-compute crossbar readout: 2x2 weight-cell array driven by row voltage sources, per-column KCL summation (Sigma) nodes, and a real circuitikz device-symbol readout stage (sense resistor / reference current source) per column. First circuitikz-based template in this local checkout -- opentikz ships zero circuitikz coverage upstream. Colors are the analog-ai domain-semantic scheme (blue=input/activation, green=analog weight cell, orange=analog current/summation), grafted from figstyle.tex, not opentikz's five-color ot* palette (see cp-4856 learnings note on the palette-invariant collision).",
+    "description": "Analog in-memory-compute crossbar readout: 2x2 weight-cell array driven by row voltage sources, per-column KCL summation (Sigma) nodes, and a real circuitikz device-symbol readout stage (sense resistor / reference current source) per column. First circuitikz-based template in this local checkout -- opentikz ships zero circuitikz coverage upstream. Colors are the ESL domain-semantic tokens (contract §2, ADR-0005 D7): inputdomain=input/activation (blue), weightdomain=analog weight cell (green), analogdomain=analog current/summation (orange) -- extending opentikz's five-color ot* palette, not remapped onto it (see reference/color-palettes/color-palettes.md and cp-4856 learnings note on the palette-invariant collision).",
     "domain": [
       "circuits",
       "esl-architecture"
@@ -2233,7 +2233,7 @@
       "invariants": [
         "two-index subscripts stay comma-separated ($G_{i,j}$, $I_{i,j}$), never $G_{ij}$ -- family-wide convention from figstyle.tex/adcbuffer.tex",
         "circuitikz `to[...]` bipoles are reserved for real EE devices (resistor/source/capacitor/etc.); crossbar cells, KCL nodes, and voltage-source glyphs stay the hand-styled figstyle node styles (cell/kclnode/vsource) -- do not redraw a cell as a circuitikz bipole, and do not redraw a real device as a plain tikz node; mixing the two idioms in one figure is intentional here and must stay legible (label each readout branch, as in operations.add-readout-device)",
-        "awire (orange, analog current) is reserved for cell-to-KCL-node and KCL-node-to-device wiring; vwire (blue) is reserved for source-to-cell wiring; never swap wire colors across the analog/digital or voltage/current domain boundary",
+        "awire (analogdomain, analog current) is reserved for cell-to-KCL-node and KCL-node-to-device wiring; vwire (inputdomain) is reserved for source-to-cell wiring; never swap wire colors across the analog/digital or voltage/current domain boundary, and never replace a token binding with a raw color name (tools/validate.py rejects this)",
         "every KCL node must have a labeled incoming-current annotation (currentlbl) placed clear of neighboring columns -- verify by rendering to PNG before committing; label collisions between adjacent columns are the primary failure mode this template hit during the cp-4856 PoC (fixed via xshift offsets on the readout captions)",
         "the visual self-check (pdftoppm -> read the PNG) is mandatory before calling this template done -- this exact template shipped with two colliding label pairs on first compile and only the render caught it"
       ],
@@ -2257,7 +2257,7 @@
         },
         {
           "id": "recolor-role",
-          "summary": "change the domain-semantic color for a whole role in that role's style definition; keep vsource=blue, cell=green, kclnode/awire/currentlbl=orange, per the analog-ai family's settled scheme, unless a project's own settled-decisions record overrides it (this template ships no settled-decisions record of its own -- it is a PoC graft, not the shipped Phase-1 component library, see D4/R2.3 of ADR-0004)"
+          "summary": "change the domain-semantic color for a whole role by re-binding that role's palette token (e.g. \\colorlet{inputdomain}{...}), never by editing the role's style to a raw color; keep vsource=inputdomain, cell=weightdomain, kclnode/awire/currentlbl=analogdomain, per the analog-ai family's settled scheme, unless a project's own settled-decisions record overrides it (this template ships no settled-decisions record of its own -- it is a PoC graft, not the shipped Phase-1 component library, see D4/R2.3 of ADR-0004)"
         }
       ],
       "parameters": [
