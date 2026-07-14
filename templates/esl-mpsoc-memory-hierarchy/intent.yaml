@@ -7,11 +7,15 @@ entities:
   - name: tile
     role: a tile/cluster container that holds a row of PEs
     component: tile
-    nodes: ["tile-<t>"]
+    node_family:
+      stem: tile
+      indices: [t]
   - name: pe
     role: a processing element inside a tile
     component: pe
-    nodes: ["pe-<t>-<k>"]
+    node_family:
+      stem: pe
+      indices: [t, k]
   - name: shared memory
     role: the one cache/shared-memory block every tile's inter-bus registers against
     component: mem-block

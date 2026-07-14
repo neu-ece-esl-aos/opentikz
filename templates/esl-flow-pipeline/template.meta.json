@@ -22,7 +22,7 @@
       {"name": "\\paramoutlabel", "type": "text", "meaning": "output artifact label", "default": "Output"},
       {"name": "\\groupcaption", "type": "text", "meaning": "fused-stage group-box caption", "default": "fused"}
     ],
-    "node_naming": "task-node: (task-a); task-node: (task-b); proc-stage: (stage-<i>); param-node: (param-out); group-box: (fusedgroup)",
+    "node_naming": "task-node: (task-a); task-node: (task-b); proc-stage: stage-<i> (generated, index-addressable); param-node: (param-out); group-box: (fusedgroup)",
     "styles": ["tasknode", "procstage", "paramnode", "groupbox", "grouplabel", "flowedge"],
     "operations": [
       {"id": "resize-chain", "summary": "edit \\nstages -- the generator re-derives every stage node name and position; no coordinate ever needs hand-editing"},

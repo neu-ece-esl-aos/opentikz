@@ -2751,7 +2751,7 @@
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
         "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "task-node: (task-a); task-node: (task-b); proc-stage: (stage-<i>); param-node: (param-out); group-box: (fusedgroup)",
+      "node_naming": "task-node: (task-a); task-node: (task-b); proc-stage: stage-<i> (generated, index-addressable); param-node: (param-out); group-box: (fusedgroup)",
       "operations": [
         {
           "id": "resize-chain",
@@ -2887,7 +2887,7 @@
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
         "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "tile: (tile-<t>); pe: (pe-<t>-<k>); mem-block: (mem)",
+      "node_naming": "tile: tile-<t> (generated, index-addressable); pe: pe-<t>-<k> (generated, index-addressable); mem-block: (mem)",
       "operations": [
         {
           "id": "resize-array",
@@ -2961,7 +2961,8 @@
         "tilelabel",
         "memblock",
         "intrabus",
-        "interbus"
+        "interbus",
+        "fit margins"
       ]
     },
     "id": "esl-mpsoc-memory-hierarchy",
@@ -3159,7 +3160,7 @@
         "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
         "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "time-axis: (timeaxis); lifeline: (lifeline-<i>); sync-marker: (sync-<i>)",
+      "node_naming": "time-axis: (timeaxis); lifeline: lifeline-<i> (generated, index-addressable); sync-marker: sync-<i> (generated, index-addressable)",
       "operations": [
         {
           "id": "resize-lifelines",

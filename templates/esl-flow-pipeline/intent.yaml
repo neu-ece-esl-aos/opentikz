@@ -15,7 +15,9 @@ entities:
   - name: pipeline stage
     role: a transform stage in the pipeline, generated in a row
     component: proc-stage
-    nodes: ["stage-<i>"]
+    node_family:
+      stem: stage
+      indices: [i]
   - name: output artifact
     role: the parameter/artifact box the last stage emits
     component: param-node
