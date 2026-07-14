@@ -52,6 +52,7 @@ from pathlib import Path
 from _common import iter_meta_files, load_json, rel, repo_root, tex_sibling
 from adapter.checks import adapter_problems
 from adapter.contract_loader import load_contract
+from adapter.conformance import run_conformance
 from render_selfcheck import (
     DEFAULT_DPI,
     _allow_diagonal_edges,
@@ -598,6 +599,27 @@ def main(argv: list[str] | None = None) -> int:
             failures.append(item)
         else:
             print(f"PASS  {item} (palette matches contract §2)")
+            n_pass += 1
+
+    # --- WP-9 contract-conformance gate (ADR-0005 D3, the feature's exit gate):
+    # walks the vendored contract itself (§1a/§1b vocabulary, §2 tokens, §3a
+    # primitives, §3b family records + placement grammar, §4 intent/master-header)
+    # and asserts a realized backend #2 counterpart for every element, plus the
+    # anti-coupling harness (no dependence on backend #1's figstyle.tex/
+    # tikzsemantics.tex or any un-vendored Phase-1 skill asset). See
+    # tools/adapter/conformance.py and contract/CONTRACT-GAPS.md.
+    if contract_file.exists():
+        item = "contract-conformance (WP-9)"
+        report = run_conformance(root)
+        if not report.ok:
+            print(f"FAIL  {item}:")
+            for check, findings in report.by_check().items():
+                for f in findings:
+                    print(f"        - [{check}] {f.detail}")
+            n_fail += 1
+            failures.append(item)
+        else:
+            print(f"PASS  {item} (backend #2 buildable from the contract alone)")
             n_pass += 1
 
     total = n_pass + n_fail + n_skip
