@@ -1325,7 +1325,7 @@
   },
   {
     "author": "cp-4894 (WP-5, ADR-0005 D4)",
-    "description": "Operational-amplifier triangle (circuitikz's native `op amp` shape) with labeled +/- inputs and an output lead -- a real EE device symbol, left undyed like every other circuitikz bipole in this family (contract §1a).",
+    "description": "Operational-amplifier triangle (circuitikz's native `op amp` shape) with labeled +/- inputs and an output lead -- a real EE device symbol, left undyed like every other circuitikz bipole in this family (contract §1a). NOTE: contract §1a names no active/multi-terminal device class (op-amp); the id/tags here are for catalog discoverability only, not a claimed §1 vocabulary mapping -- see contract/CONTRACT-GAPS.md (WP-5 row).",
     "domain": [
       "circuits"
     ],
