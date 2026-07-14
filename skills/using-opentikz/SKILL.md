@@ -104,9 +104,18 @@ say the word to change any."*
       collisions, labels contained in their nodes, edges not crossing
       unrelated nodes, legibility at the figure's intended print size, and
       (if the figure has an intent record) its `check_questions` answered
-      from the render alone.
-   4. Any problem found → fix and re-run this step. Only proceed to deliver
-      once every checklist item is clear.
+      from the render alone. **For a multi-element figure (an array, a grid,
+      anything with repeated components), a full-figure thumbnail is not
+      enough** — a collision invisible at thumbnail scale can be unmistakable
+      at 400-900%; crop and zoom at least one representative unit
+      (`docs/VISUAL_SELFCHECK.md`'s "Force the resolution").
+   4. **No reclassification.** An overlap you notice IS a collision — "minor",
+      "cosmetic", "acceptable at this density", and "probably by design" are
+      not verdicts you get to reach for; the only outs are "fix it" or an
+      explicit, committed `selfcheck` opt-out in the item's `meta.json`
+      (`docs/VISUAL_SELFCHECK.md`'s "No reclassification"). Any problem found
+      → fix and re-run this step. Only proceed to deliver once every
+      checklist item is clear.
 6. **Deliver.** Return the edited `.tex`, confirm the visual self-check passed,
    and give the one-line assumptions summary.
 

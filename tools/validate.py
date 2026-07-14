@@ -52,7 +52,14 @@ from pathlib import Path
 from _common import iter_meta_files, load_json, rel, repo_root, tex_sibling
 from adapter.checks import adapter_problems
 from adapter.contract_loader import load_contract
-from render_selfcheck import DEFAULT_DPI, detect_overfull, detect_text_overlaps, render_png
+from render_selfcheck import (
+    DEFAULT_DPI,
+    _allow_diagonal_edges,
+    detect_geometry_problems,
+    detect_overfull,
+    detect_text_overlaps,
+    render_png,
+)
 
 SCHEMA_NAME = "meta.schema.json"
 SELFCHECK_PNG_DIR = "_selfcheck-pngs"  # gitignored; CI's PNG-self-check-gate output
@@ -418,6 +425,7 @@ def _compile_tex(
 
         problems = detect_overfull(log)
         problems += detect_text_overlaps(pdf)
+        problems += detect_geometry_problems(tex, allow_diagonal_edges=_allow_diagonal_edges(tex))
         selfcheck_png.parent.mkdir(parents=True, exist_ok=True)
         render_png(pdf, selfcheck_png.with_suffix(""), dpi=DEFAULT_DPI)
         return ok, log, problems
