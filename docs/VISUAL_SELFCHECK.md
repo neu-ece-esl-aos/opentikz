@@ -16,10 +16,10 @@ compile  ->  render to PNG  ->  READ THE PNG  ->  check against the checklist be
 `validate.py --strict` proves a `.tex` **compiles**. It does not prove the
 figure is **legible**. The PoC `esl-crossbar-kcl` template (ported into this
 fork with its defect intact, see `templates/esl-crossbar-kcl/`) is the
-motivating case: it passed `validate.py --strict` at every revision, and it
-still visually collides today (see "Demonstrated catch" below) — a defect
-only the rendered image reveals. A verify loop that stops at "it compiles" is
-not sufficient (ADR-0004 §D2; ADR-0005 §D6).
+motivating case: it passed `validate.py --strict` at every revision while it
+visually collided (see "Demonstrated catch" below, now fixed by WP-5/cp-4894)
+— a defect only the rendered image revealed. A verify loop that stops at "it
+compiles" is not sufficient (ADR-0004 §D2; ADR-0005 §D6).
 
 ## The checklist (read the PNG against every item)
 
@@ -120,33 +120,42 @@ Do not treat a mechanically-clean `validate.py` run as "the figure is fine."
 The tool's own output says so explicitly (see the `note:`/`PASS` messages) —
 read the PNG anyway.
 
-## Demonstrated catch: `esl-crossbar-kcl`
+## Demonstrated catch: `esl-crossbar-kcl` (fixed by WP-5/cp-4894)
 
-Run today against the ported `esl-crossbar-kcl` fixture (`tools/render_selfcheck.py
-templates/esl-crossbar-kcl`): the mechanical checks report **no problems** —
-zero overfull boxes, zero text-bbox overlaps. `validate.py --strict` also
-passes. By the "verify by compiling" standard alone, this template is fine.
+Run originally against the ported `esl-crossbar-kcl` fixture
+(`tools/render_selfcheck.py templates/esl-crossbar-kcl`): the mechanical
+checks reported **no problems** — zero overfull boxes, zero text-bbox
+overlaps. `validate.py --strict` also passed. By the "verify by compiling"
+standard alone, this template looked fine.
 
-**It is not.** Reading the render (`docs/gate-demo/esl-crossbar-kcl-full.png`,
-committed evidence; regenerate yourself with `python3 tools/render_selfcheck.py
-templates/esl-crossbar-kcl`) shows the per-column KCL summation node (the
-orange "Σ" circle) visually overlapping the circuitikz readout-device symbol
-drawn directly beneath it — in **both** columns (zoomed crop:
+**It was not.** Reading the render (`docs/gate-demo/esl-crossbar-kcl-full.png`,
+committed evidence of the *original defect* — this PNG predates the fix and is
+kept as the motivating example; regenerate the *current, fixed* render
+yourself with `python3 tools/render_selfcheck.py templates/esl-crossbar-kcl`)
+showed the per-column KCL summation node (the orange "Σ" circle) visually
+overlapping the circuitikz readout-device symbol drawn directly beneath it —
+in **both** columns (zoomed crop, also the pre-fix state:
 `docs/gate-demo/esl-crossbar-kcl-collision-zoom.png`):
 
-- Column 1: the resistor `R_sense` zigzag's top lead runs up into the Σ
+- Column 1: the resistor `R_sense` zigzag's top lead ran up into the Σ
   node's circle.
-- Column 2: the current-source `I_ref` circle overlaps the Σ node's circle
-  outright — the two circles visually merge.
+- Column 2: the current-source `I_ref` circle overlapped the Σ node's circle
+  outright — the two circles visually merged.
 
-This is a **symbol/node overlap** (checklist item 2), the same class of
+This was a **symbol/node overlap** (checklist item 2), the same class of
 "compiles cleanly, visually broken" defect the cp-4856 PoC's original
-colliding-label incident demonstrated, now confirmed as a live, current
-instance in the ported fixture. It was found exactly the way this gate
+colliding-label incident demonstrated. It was found exactly the way this gate
 requires: compile, render, and *look* — the mechanical checks did not and
-structurally cannot catch it (see above). This finding was reported to
-cp-4883 (the Phase-2b coordinator) and to cp-4894 (WP-5, circuit template
-family), which owns the fix — this task does not modify the fixture's `.tex`.
+structurally cannot catch it (see above). **Fixed by WP-5 (cp-4894):** the
+KCL-node-to-readout-device offset was `-1.15cm` (too short for circuitikz's
+default bipole size); `-1.8cm` clears the collision for both symbol types,
+verified by re-rendering. The scaled/broadened sibling template
+`templates/esl-crossbar-kcl-adc/` (three readout device types — resistor,
+capacitor, current source — plus an ADC stage and the domain-band/boundary
+convention) uses the same collision-free clearance from the start; its own
+render evidence is `docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-full.png`
+and `docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-readout-band-zoom.png`
+(600 DPI crop, ~6x a 96 DPI baseline reading size).
 
 ## Running it yourself
 
