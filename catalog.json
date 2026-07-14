@@ -2070,12 +2070,11 @@
     ],
     "edit_contract": {
       "invariants": [
-        "each tile's boundary fit node must be declared after all nodes it fits, inside an on-background-layer scope, so it sits behind them",
-        "preserve semantic node names; give new components clear role-based names with a tile-index suffix",
-        "colors encode role/domain semantics (core/process/parameters/terminal/intrabus/interbus) via the contract §2 palette tokens (core-accent/process-accent/param-accent/digitaldomain/intra-bus/inter-bus), not decoration — do not introduce a raw hex or stock xcolor/dvipsnames name (tools/validate.py rejects this), and do not force these roles onto opentikz's otblue/otorange/otteal/otpurple/otgray names (palette collision — see learnings note; ADR-0005 D7 extends the palette instead)",
-        "the inter-tile bus is always dashed and the intra-tile bus is always solid — this distinction is load-bearing (NoC/global vs. local/tile-internal), grafted from tikzsetup.tex's intrabus/interbus split"
+        "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+        "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+        "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "fixed semantic node names: (core1) (acc1) (cfg1) (tile1) (core2) (acc2) (cfg2) (tile2) (io); new per-tile components take a role-based name with the tile-index suffix (e.g. (mem1), (dma2))",
+      "node_naming": "cpu-core: (core1, core2); acc-core: (acc1, acc2); param-node: (cfg1, cfg2); tile: (tile1, tile2)",
       "operations": [
         {
           "id": "rename-component",
@@ -2231,12 +2230,11 @@
     ],
     "edit_contract": {
       "invariants": [
-        "row/column wiring is drawn as ONE colinear rail per row (vin-<r> through cell-<r>-<ncols>) and ONE colinear rail per column (cell-1-<c> through cell-<nrows>-<c> or kcl-<c>) -- never point-to-point per cell, which would be both O(rows*cols) edges and a visually incorrect crossbar reading at scale",
-        "above roughly 10x10-15x15 cells, set \\celllabelmode to \"none\" and raise \\edgelabelstride -- per-cell subscript text and a numeric label on every row/column both collide or become unreadable at higher densities; verified by rendering to PNG before shipping any array this size (ADR-0005 D6). Cell identity/addressability never depends on the printed label, only on the node name",
-        "the two-index node-naming stays row-then-col and 1-based at any array size: cell-<r>-<c>, never renumbered or collapsed when the array resizes",
-        "colors are bound only through the ESL domain-semantic \\colorlet tokens declared at the top of the file (inputdomain/weightdomain/analogdomain/digitaldomain, contract §2/ADR-0005 D7) -- never a raw stock-xcolor name or inline hex inside a style definition (tools/validate.py enforces this); do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
+        "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+        "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+        "(seam: no WP-7 family settled-decisions record yet for family 'circuit-schematic'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "generated, index-addressable, 1:1 with contract §1a: cell-<r>-<c> is a crossbar-cell (contract component `crossbar-cell`), 1-based row,col over the \\nrows x \\ncols array -- together the array IS the contract's `crossbar-array` (\"a full nrows x ncols VMM cell array, placed by row/col index\"); vin-<r> is a v-source (contract component `v-source`), 1-based row index; kcl-<c> is a kcl-node (contract component `kcl-node`), 1-based column index, present only when \\showkcl=1. This replaces esl-crossbar-kcl's fixed concatenated-digit naming (g11, g21, ...), which is ambiguous once row or col exceeds 9 -- coordinate with the WP-2 adapter's node_naming derivation (cp-4890) on which scheme becomes the family-wide convention before both templates diverge permanently.",
+      "node_naming": "v-source: vin-<row> (generated, index-addressable); crossbar-cell: cell-<row>-<col> (generated, index-addressable); kcl-node: kcl-<col> (generated, index-addressable)",
       "operations": [
         {
           "id": "resize-array",
@@ -2368,13 +2366,11 @@
     ],
     "edit_contract": {
       "invariants": [
-        "two-index subscripts stay comma-separated ($G_{i,j}$, $I_{i,j}$), never $G_{ij}$ -- family-wide convention from figstyle.tex/adcbuffer.tex",
-        "circuitikz `to[...]` bipoles are reserved for real EE devices (resistor/source/capacitor/etc.); crossbar cells, KCL nodes, and voltage-source glyphs stay the hand-styled figstyle node styles (cell/kclnode/vsource) -- do not redraw a cell as a circuitikz bipole, and do not redraw a real device as a plain tikz node; mixing the two idioms in one figure is intentional here and must stay legible (label each readout branch, as in operations.add-readout-device)",
-        "awire (analogdomain, analog current) is reserved for cell-to-KCL-node and KCL-node-to-device wiring; vwire (inputdomain) is reserved for source-to-cell wiring; never swap wire colors across the analog/digital or voltage/current domain boundary, and never replace a token binding with a raw color name (tools/validate.py rejects this)",
-        "every KCL node must have a labeled incoming-current annotation (currentlbl) placed clear of neighboring columns -- verify by rendering to PNG before committing; label collisions between adjacent columns are the primary failure mode this template hit during the cp-4856 PoC (fixed via xshift offsets on the readout captions)",
-        "the visual self-check (pdftoppm -> read the PNG) is mandatory before calling this template done -- this exact template shipped with two colliding label pairs on first compile and only the render caught it"
+        "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+        "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+        "(seam: no WP-7 family settled-decisions record yet for family 'circuit-schematic'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "fixed semantic node names: (v<row>) row voltage sources, (g<row><col>) crossbar cells (e.g. g11, g21), (k<col>) per-column KCL nodes, (k<col>out) readout-branch coordinate; new rows/columns extend the same <row>/<col> integer-suffix scheme -- this PoC hand-instantiates a fixed 2x2 array rather than a \\foreach loop (see operations.add-row / add-column for what a real edit does)",
+      "node_naming": "v-source: (v1, v2); crossbar-cell: (g11, g21, g12, g22); kcl-node: (k1, k2)",
       "operations": [
         {
           "id": "rename-label",
@@ -2485,16 +2481,11 @@
     ],
     "edit_contract": {
       "invariants": [
-        "each tile's fit box is declared after every PE node it fits, inside an on-background-layer scope, so it sits behind them (containment primitive, §3a)",
-        "the fit box uses the asymmetric \"fit margins\" helper (top > left/right/bottom) so the corner label always has dedicated headroom above the topmost PE row -- a label must NEVER be positioned on top of a contained node; if the label still crowds a PE after a resize, widen the top margin or \\tilegapy, never shrink the label off the box instead",
-        "\\tilegapy must stay large enough to clear both tiles' fit-box margins across a row boundary (~0.7cm together at the shipped default) -- shrinking it below that reintroduces a label/tile-boundary collision between vertically adjacent tiles",
-        "the intra-tile bus is an orthogonal row/column lattice -- a horizontal edge between every same-row PE neighbor pair and a vertical edge between every same-column PE neighbor pair -- and MUST NEVER include a diagonal segment (typed-routing primitive, §3a: \"orthogonal, no stray crossings\"); a boustrophedon reading-order chain was tried first and rejected specifically because its row-wrap edge is diagonal",
-        "node names stay index-addressable at any grid size: tile-<r>-<c> and pe-<r>-<c>-<k>, never renumbered or collapsed when the grid resizes",
-        "the inter-tile mesh only wires each tile to its immediate right/below neighbor (O(tiles) edges) -- never a full mesh (O(tiles^2)), which is both semantically wrong for a NoC and illegible past a handful of tiles",
-        "above roughly 8-12 tiles, set \\pelabelmode to \"none\" -- per-PE numeric text at that density collides or becomes unreadable; verified by rendering to PNG **and reading it at zoom, not just a thumbnail glance** before shipping any array this size (ADR-0005 D6) -- a label sitting on a node can compile cleanly and still be invisible at a small preview size. PE identity/addressability never depends on the printed label, only on the node name",
-        "colors are bound only through the ESL domain-semantic \\colorlet tokens declared at the top of the file (core-accent/intra-bus/inter-bus, contract §2/ADR-0005 D7) -- never a raw stock-xcolor/dvipsnames name or inline hex inside a style definition (tools/validate.py enforces this); do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
+        "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+        "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+        "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
       ],
-      "node_naming": "generated, index-addressable, 1:1 with contract §1b: tile-<r>-<c> is the tile/cluster container (contract component `tile`), 1-based row,col over the \\ntilerows x \\ntilecols grid; pe-<r>-<c>-<k> is a processing element (contract component `pe`) inside tile (r,c), 1-based flat index k (row-major) over that tile's \\pegridrows x \\pegridcols sub-grid. This extends esl-architecture-block's fixed \"role+tile-index\" naming (core1, acc1, ...) to full 2-D grid addressing so the same array-scale node can be targeted by (row,col[,k]) rather than a single flat suffix -- coordinate with the WP-2 adapter's node_naming derivation (cp-4890) before treating this as the family-wide convention.",
+      "node_naming": "tile: tile-<row>-<col> (generated, index-addressable); pe: pe-<row>-<col>-<k> (generated, index-addressable)",
       "operations": [
         {
           "id": "resize-grid",
@@ -2590,7 +2581,8 @@
         "tilebox",
         "tilelabel",
         "intrabus",
-        "interbus"
+        "interbus",
+        "fit margins"
       ]
     },
     "id": "esl-mpsoc-tile-array",
