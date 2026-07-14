@@ -14,6 +14,14 @@ For every ``*.meta.json`` under icons/, templates/, examples/:
        - templates never colour via a raw hue (a stock xcolor/dvipsnames name or
          an inline hex) instead of a palette name (the five ``ot*`` names or the
          ADR-0005 §D7 contract domain-semantic tokens; see reference/color-palettes/);
+       - for a template shipping an ``edit_contract``, the backend-adapter checks
+         (ADR-0005 D2/D3, ``tools/adapter/``) also run: the checked-in
+         ``edit_contract`` must equal what the adapter derives right now from the
+         vendored contract + the template's sidecar intent record; every intent-
+         record entity naming a semantic component must be a real contract §1
+         vocabulary id; and the ``.tex`` master-header block must match the
+         sidecar. See README-ESL.md "CI logic convention" for why this rides
+         ``validate.py`` rather than a new ``.github/workflows/`` step.
   3. confirm the ``.tex`` compiles standalone via ``latexmk``.
 
 It also runs two library-wide (non-per-item) gates once per invocation:
@@ -42,8 +50,11 @@ import tempfile
 from pathlib import Path
 
 from _common import iter_meta_files, load_json, rel, repo_root, tex_sibling
+from adapter.checks import adapter_problems
+from adapter.contract_loader import load_contract
 
 SCHEMA_NAME = "meta.schema.json"
+_contract = None  # lazy singleton; loaded on first use (see _get_contract)
 
 # --- .tex static analysis ------------------------------------------------- #
 _DOCCLASS_RE = re.compile(r"\\documentclass\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}")
@@ -131,8 +142,16 @@ def _structural_problems(
     problems.extend(_edit_contract_problems(meta, tex))
     if meta.get("type") == "template":
         problems.extend(_palette_problems(tex))
+    problems.extend(adapter_problems(meta, tex, tex.parent, _get_contract()))
 
     return problems
+
+
+def _get_contract():
+    global _contract
+    if _contract is None:
+        _contract = load_contract()
+    return _contract
 
 
 def _edit_contract_problems(meta: dict, tex: Path) -> list[str]:

@@ -1,3 +1,6 @@
 # Python dependencies for the OpenTikZ tooling (tools/).
 # The .tex toolchain (latexmk, dvisvgm/pdf2svg) is a system dependency, not pip.
 jsonschema>=4.20,<5
+# tools/adapter/ (ADR-0005 WP-2): parses the contract's §3/§4 YAML-shaped
+# schema blocks and each template's sidecar intent-record YAML.
+PyYAML>=6.0,<7
