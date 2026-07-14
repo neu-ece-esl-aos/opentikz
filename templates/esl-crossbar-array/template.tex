@@ -1,0 +1,96 @@
+\documentclass[border=8pt]{standalone}
+
+% --- packages (mirror these in template.meta.json "requires") ---
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc, arrows.meta}
+
+% --- palette: analog-ai domain-semantic scheme (NOT opentikz's ot* palette) ---
+% Same role/color assignments as esl-crossbar-kcl (blue=input/activation,
+% green=analog weight cell, orange=analog current/summation) so a
+% \foreach-generated array reads as the same family, not a different figure.
+
+\begin{document}
+% ==== parameters (edit these; this is the \foreach generator's parameter surface —
+% nothing below this block should ever be edited to change array shape/size) =====
+\def\nrows{2}            % number of crossbar rows (VMM input rows)
+\def\ncols{2}             % number of crossbar columns (VMM output columns)
+\def\rowgap{0.7}          % vertical gap between rows (cm)
+\def\colgap{0.7}          % horizontal gap between columns (cm)
+\def\cellsize{0.5}        % crossbar-cell node size (cm)
+\def\celllabelmode{full}  % full|none -- legibility control for per-cell $G_{r,c}$ text
+\def\showkcl{1}           % 1 = draw per-column KCL summation node; 0 = omit
+\def\vlabelprefix{V}      % row voltage-source label prefix
+\def\edgelabelstride{1}   % show a row/col index label only every Nth line (1 = every line)
+% =========================================================================
+
+\begin{tikzpicture}[
+    font=\small,
+    >=Stealth,
+    cell/.style={draw, rectangle, thick, fill=green!15,
+                 minimum size=\cellsize cm, inner sep=0pt, font=\tiny},
+    vsource/.style={draw=blue!55, circle, line width=0.8pt, fill=blue!18,
+                    text=black, minimum size=\cellsize cm, inner sep=0pt,
+                    font=\tiny\itshape},
+    kclnode/.style={draw, circle, thick, fill=orange!35,
+                    minimum size=\cellsize cm, inner sep=0pt, font=\tiny},
+    awire/.style={orange!80!black, thick},
+    vwire/.style={blue!60!black, thick},
+    axislbl/.style={font=\tiny, gray!40!black},
+  ]
+
+  % legibility sentinel: \celllabelmode is compared against this literal.
+  \def\CellShowFull{full}
+
+  % ==== generator: nrows x ncols crossbar-cell array, row-indexed voltage
+  % sources, column-indexed KCL nodes (contract §1a crossbar-array: "a full
+  % nrows x ncols VMM cell array, placed by row/col index") ====
+  \foreach \r in {1,...,\nrows} {
+    \pgfmathsetmacro{\py}{-(\r-1)*\rowgap}
+    \node[vsource] (vin-\r) at (0,\py) {};
+    \pgfmathtruncatemacro{\atstride}{mod(\r-1,\edgelabelstride)}
+    \ifnum\atstride=0
+      \node[axislbl, anchor=east] at ([xshift=-2pt]vin-\r.west) {\vlabelprefix\r};
+    \else
+      \ifnum\r=\nrows
+        \node[axislbl, anchor=east] at ([xshift=-2pt]vin-\r.west) {\vlabelprefix\r};
+      \fi
+    \fi
+    \foreach \c in {1,...,\ncols} {
+      \pgfmathsetmacro{\px}{\c*\colgap}
+      \node[cell] (cell-\r-\c) at (\px,\py) {%
+        \ifx\celllabelmode\CellShowFull $G_{\r,\c}$\fi
+      };
+    }
+    % row rail: one draw from the voltage source through every cell in the row
+    % (all colinear at y=\py) -- O(1) edges per row, not O(cols) point-to-point.
+    \draw[vwire] (vin-\r) -- (cell-\r-\ncols);
+  }
+
+  % ==== column rails + optional KCL summation nodes (contract §1a kcl-node:
+  % "summation node collecting column current") ====
+  \pgfmathsetmacro{\kclrow}{-(\nrows-1)*\rowgap-\rowgap}
+  \foreach \c in {1,...,\ncols} {
+    \pgfmathsetmacro{\px}{\c*\colgap}
+    \ifnum\showkcl=1
+      \node[kclnode] (kcl-\c) at (\px,\kclrow) {$\Sigma$};
+      % column rail: one draw from the top cell through every cell in the
+      % column down to its KCL node (all colinear at x=\px).
+      \draw[awire] (cell-1-\c) -- (kcl-\c);
+      \def\colbottom{kcl-\c}
+    \else
+      \draw[awire] (cell-1-\c) -- (cell-\nrows-\c);
+      \def\colbottom{cell-\nrows-\c}
+    \fi
+    \pgfmathtruncatemacro{\atstride}{mod(\c-1,\edgelabelstride)}
+    \ifnum\atstride=0
+      \node[axislbl, anchor=north] at ([yshift=-2pt]\colbottom.south) {\c};
+    \else
+      \ifnum\c=\ncols
+        \node[axislbl, anchor=north] at ([yshift=-2pt]\colbottom.south) {\c};
+      \fi
+    \fi
+  }
+
+\end{tikzpicture}
+\end{document}
