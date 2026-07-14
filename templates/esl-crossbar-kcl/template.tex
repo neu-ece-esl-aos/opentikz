@@ -8,10 +8,16 @@
 \usepackage{amsmath}
 \usetikzlibrary{arrows.meta, backgrounds, positioning, calc}
 
-% --- palette: analog-ai domain-semantic scheme (NOT opentikz's ot* palette) ---
-% Grafted from figstyle.tex (analog-ai EmbML-HB-2026-Ch-AnalogEDAI/fig/,
-% Gunar-reviewed 2026-07-13 on adcbuffer.tex): blue=input/activation,
-% green=analog weight cell, gray=digital, orange=analog current/accumulation.
+% --- palette: ESL domain-semantic tokens (contract §2, ADR-0005 D7 -- extends
+% opentikz's ot* palette, does not remap onto it; see
+% reference/color-palettes/color-palettes.md "ESL domain-semantic tokens").
+% Originally grafted from figstyle.tex (analog-ai EmbML-HB-2026-Ch-AnalogEDAI/fig/,
+% Gunar-reviewed 2026-07-13 on adcbuffer.tex) as raw blue/green/gray/orange; now
+% bound through the named palette tokens tools/validate.py enforces.
+\colorlet{inputdomain}{blue}       % inputs / activations
+\colorlet{weightdomain}{green}     % analog weight cells
+\colorlet{digitaldomain}{gray}     % digital words / logic
+\colorlet{analogdomain}{orange}    % analog current / accumulation
 
 \begin{document}
 % ==== parameters (edit these) ============================================
@@ -31,21 +37,21 @@
     font=\small,
     >=Stealth,
     % --- grafted node/wire styles, verbatim names from figstyle.tex ---
-    kclnode/.style={draw, circle, thick, fill=orange!35,
+    kclnode/.style={draw, circle, thick, fill=analogdomain!35,
                     minimum size=6mm, inner sep=0pt},
-    cell/.style={draw, rectangle, thick, fill=green!15,
+    cell/.style={draw, rectangle, thick, fill=weightdomain!15,
                  minimum width=0.95cm, minimum height=0.60cm,
                  font=\footnotesize},
-    vsource/.style={draw=blue!55, circle, line width=1pt, fill=blue!18,
-                    text=black, minimum size=8mm, inner sep=0pt,
+    vsource/.style={draw=inputdomain!55, circle, line width=1pt, fill=inputdomain!18,
+                    minimum size=8mm, inner sep=0pt,
                     font=\scriptsize\itshape},
-    sidenote/.style={font=\fontsize{6.5}{8}\selectfont, gray!55!black},
+    sidenote/.style={font=\fontsize{6.5}{8}\selectfont, digitaldomain!55!black},
     domainlbl/.style={font=\fontsize{7}{9}\selectfont\itshape},
-    currentlbl/.style={font=\fontsize{6.5}{8}\selectfont, orange!65!black},
-    voltagelbl/.style={font=\fontsize{6.5}{8}\selectfont, blue!65!black},
-    awire/.style={orange!80!black, thick},
-    dwire/.style={gray!65!black, thick},
-    vwire/.style={blue!60!black, thick},
+    currentlbl/.style={font=\fontsize{6.5}{8}\selectfont, analogdomain!65!black},
+    voltagelbl/.style={font=\fontsize{6.5}{8}\selectfont, inputdomain!65!black},
+    awire/.style={analogdomain!80!black, thick},
+    dwire/.style={digitaldomain!65!black, thick},
+    vwire/.style={inputdomain!60!black, thick},
   ]
 
   % ---- row voltage sources (analog input activations) ----
@@ -86,7 +92,7 @@
   \node[sidenote, below=2pt of k1out, xshift=-9pt] {col.\,1 readout};
   \node[sidenote, below=2pt of k2out, xshift=9pt] {col.\,2 readout};
 
-  \node[domainlbl, blue!65!black, above=6pt of v1] {Analog domain};
+  \node[domainlbl, inputdomain!65!black, above=6pt of v1] {Analog domain};
   \node[currentlbl, right=4pt of k2out] {\outcollabel};
 
 \end{tikzpicture}

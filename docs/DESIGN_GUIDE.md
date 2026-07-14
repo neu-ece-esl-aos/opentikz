@@ -25,7 +25,9 @@ Nodes must have stable, descriptive names so the skill can target them:
 ## Color
 
 - Never hard-code hex inline. Define palettes in `reference/color-palettes/` and
-  reference named colors (e.g. `otblue`, `otorange`).
+  reference named colors (e.g. `otblue`, `otorange`, or an ESL domain-semantic
+  token like `analogdomain` — ADR-0005 §D7 extends the palette, it does not
+  remap ESL figure families onto the five `ot*` names).
 - Provide a light and a dark-friendly variant where feasible.
 - Default palette should be color-blind friendly.
 - Exception: `icons/brands/` marks use their official brand color, defined once

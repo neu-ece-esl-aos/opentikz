@@ -11,7 +11,17 @@ For every ``*.meta.json`` under icons/, templates/, examples/:
          declared in ``requires`` (so the metadata never drifts from the source);
        - any ``edit_contract`` (templates only) names parameters/styles that
          actually exist in the ``.tex`` (so the skill's contract never drifts);
+       - templates never colour via a raw hue (a stock xcolor/dvipsnames name or
+         an inline hex) instead of a palette name (the five ``ot*`` names or the
+         ADR-0005 §D7 contract domain-semantic tokens; see reference/color-palettes/);
   3. confirm the ``.tex`` compiles standalone via ``latexmk``.
+
+It also runs two library-wide (non-per-item) gates once per invocation:
+  - the vendored contract's sha256 pin (``_contract_checksum_problem``);
+  - the extended palette's token->role/hue/hex bindings against the contract's
+    §2 table, so ``reference/color-palettes/color-palettes.md`` can never silently
+    drift from the frozen contract it extends (``_palette_contract_drift_problem``,
+    ADR-0005 D7/WP-3).
 
 The static checks (1, 2) always run. The compile step (3) is SKIPped (non-fatal)
 when no LaTeX engine is installed, so the script still runs locally without a TeX
@@ -119,6 +129,8 @@ def _structural_problems(
             )
 
     problems.extend(_edit_contract_problems(meta, tex))
+    if meta.get("type") == "template":
+        problems.extend(_palette_problems(tex))
 
     return problems
 
@@ -154,6 +166,85 @@ def _edit_contract_problems(meta: dict, tex: Path) -> list[str]:
     return problems
 
 
+# --- palette rule: colours only via a palette name --------------------------- #
+# The five upstream names PLUS the ADR-0005 §D7 contract domain-semantic tokens
+# (extend the palette, never remap onto the five-name scheme). Keep this set in
+# sync with reference/color-palettes/color-palettes.md; `_palette_contract_drift_problem`
+# below is the automated guard against *that* file drifting from the contract, but
+# this literal set is what the five-name rule is relaxed to admit.
+_OT_PALETTE_NAMES = {"otblue", "otorange", "otteal", "otpurple", "otgray"}
+_CONTRACT_DOMAIN_TOKENS = {
+    "inputdomain",
+    "weightdomain",
+    "digitaldomain",
+    "analogdomain",
+    "intra-bus",
+    "inter-bus",
+    "core-accent",
+    "process-accent",
+    "param-accent",
+}
+_ALLOWED_PALETTE_NAMES = _OT_PALETTE_NAMES | _CONTRACT_DOMAIN_TOKENS
+
+# Stock xcolor base names + the standard dvipsnames set: raw hues a template must
+# never reference directly (cp-4856's palette-invariant collision). A template may
+# still *define* one of these as the RHS of a \definecolor/\colorlet that binds an
+# allowed palette name to it (that is exactly how the palette extension works) --
+# only *content* (node/edge colour options) is scanned, never definition lines.
+_XCOLOR_BASE_NAMES = {
+    "red", "green", "blue", "cyan", "magenta", "yellow", "black", "white",
+    "gray", "darkgray", "lightgray", "brown", "lime", "olive", "orange",
+    "pink", "purple", "teal", "violet",
+}
+_XCOLOR_DVIPSNAMES = {
+    "Apricot", "Aquamarine", "Bittersweet", "Black", "Blue", "BlueGreen",
+    "BlueViolet", "BrickRed", "Brown", "BurntOrange", "CadetBlue",
+    "CarnationPink", "Cerulean", "CornflowerBlue", "Cyan", "Dandelion",
+    "DarkOrchid", "Emerald", "ForestGreen", "Fuchsia", "Goldenrod", "Gray",
+    "Green", "GreenYellow", "JungleGreen", "Lavender", "LimeGreen", "Magenta",
+    "Mahogany", "Maroon", "Melon", "MidnightBlue", "Mulberry", "NavyBlue",
+    "OliveGreen", "Orange", "OrangeRed", "Orchid", "Peach", "Periwinkle",
+    "PineGreen", "Plum", "ProcessBlue", "Purple", "RawSienna", "Red",
+    "RedOrange", "RedViolet", "Rhodamine", "RoyalBlue", "RoyalPurple",
+    "RubineRed", "Salmon", "SeaGreen", "Sepia", "SkyBlue", "SpringGreen",
+    "Tan", "TealBlue", "Thistle", "Turquoise", "Violet", "VioletRed",
+    "White", "WildStrawberry", "Yellow", "YellowGreen", "YellowOrange",
+}
+_RAW_COLOR_NAMES = _XCOLOR_BASE_NAMES | _XCOLOR_DVIPSNAMES
+
+_COLOR_KEY_RE = re.compile(
+    r"\b(?:draw|fill|text|color|line)\s*=\s*\{?([A-Za-z][A-Za-z0-9]*)"
+)
+_HEX_LITERAL_RE = re.compile(r"#[0-9A-Fa-f]{6}\b")
+_COLOR_DEFINE_RE = re.compile(r"\\(?:definecolor|colorlet)\b")
+
+
+def _palette_problems(tex: Path) -> list[str]:
+    """Templates must colour only via a palette name (the five ``ot*`` names or
+    the ADR-0005 §D7 contract domain-semantic tokens) -- never a raw stock-xcolor/
+    dvipsnames name or an inline hex (cp-4856's palette-invariant collision; the
+    five-name rule is *relaxed* to admit the contract tokens, not dropped)."""
+    problems: list[str] = []
+    for lineno, raw_line in enumerate(tex.read_text(encoding="utf-8").splitlines(), 1):
+        line = _strip_tex_comments(raw_line)
+        if _COLOR_DEFINE_RE.search(line):
+            continue  # a \definecolor/\colorlet line defines a palette binding
+        if _HEX_LITERAL_RE.search(line):
+            problems.append(
+                f"line {lineno}: inline hex colour literal -- bind a palette "
+                "name via \\colorlet instead (see reference/color-palettes/)"
+            )
+        for m in _COLOR_KEY_RE.finditer(line):
+            name = m.group(1)
+            if name in _RAW_COLOR_NAMES and name not in _ALLOWED_PALETTE_NAMES:
+                problems.append(
+                    f"line {lineno}: raw colour '{name}' used directly -- use a "
+                    "palette name instead (the five ot* names or a contract "
+                    "domain-semantic token; see reference/color-palettes/)"
+                )
+    return problems
+
+
 _CONTRACT_SHA256_RE = re.compile(r"```\n([0-9a-f]{64})\n```")
 
 
@@ -179,6 +270,77 @@ def _contract_checksum_problem(root: Path) -> str | None:
             f"pinned={pin} actual={actual} -- see contract/CONTRACT.md change-control "
             "(never edit the vendored copy in place; re-vendor from the source of truth)"
         )
+    return None
+
+
+# 4-column contract-style token row: | `token` | role | hue | `#hex` |
+_TOKEN_ROW_RE = re.compile(
+    r"^\|\s*`([\w-]+)`\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|\s*`(#[0-9A-Fa-f]{6})`\s*\|\s*$",
+    re.MULTILINE,
+)
+
+
+def _parse_token_table(text: str) -> dict[str, tuple[str, str, str]]:
+    """Parse every ``| \`token\` | role | hue | \`#hex\` |`` row in *text* into
+    ``{token: (role, hue, hex)}``. Shared by the contract §2 table and the
+    palette doc's mirror of it, so both sides are read the same way."""
+    return {
+        tok: (role, hue, hexv)
+        for tok, role, hue, hexv in _TOKEN_ROW_RE.findall(text)
+    }
+
+
+def _palette_contract_drift_problem(root: Path) -> str | None:
+    """Fail if reference/color-palettes/color-palettes.md's ESL domain-semantic
+    token table (ADR-0005 §D7/WP-3: role/default-hue/neutral-hex per token) drifts
+    from the vendored contract's §2 table. This is the token->role binding check
+    the contract requires a host document keep even if it re-hues a token (only
+    the *hue* is meant to be overridable; role and presence are not). Returns None
+    (no-op) if the contract hasn't been vendored yet."""
+    contract_file = root / "contract" / "backend-contract-v1.2.0.md"
+    palette_file = root / "reference" / "color-palettes" / "color-palettes.md"
+    if not contract_file.exists():
+        return None
+    if not palette_file.exists():
+        return "reference/color-palettes/color-palettes.md is missing (no ESL token table to check)"
+
+    contract_tokens = _parse_token_table(contract_file.read_text(encoding="utf-8"))
+    # Only the 9 §2 domain-semantic tokens matter here; §1's `intra-bus`/`inter-bus`
+    # component rows are 3-column and never match _TOKEN_ROW_RE, so no extra filter
+    # is needed to isolate §2 from the rest of the contract.
+    if not contract_tokens:
+        return "no token rows found in contract/backend-contract-v1.2.0.md §2 (parser drift?)"
+
+    palette_tokens = _parse_token_table(palette_file.read_text(encoding="utf-8"))
+
+    problems: list[str] = []
+    for token, (role, hue, hexv) in sorted(contract_tokens.items()):
+        got = palette_tokens.get(token)
+        if got is None:
+            problems.append(f"token '{token}' missing from the palette doc")
+            continue
+        got_role, got_hue, got_hex = got
+        if got_role != role:
+            problems.append(
+                f"token '{token}' role drifted: contract={role!r} palette={got_role!r}"
+            )
+        if got_hue != hue:
+            problems.append(
+                f"token '{token}' default hue drifted: contract={hue!r} palette={got_hue!r}"
+            )
+        if got_hex != hexv:
+            problems.append(
+                f"token '{token}' neutral hex drifted: contract={hexv!r} palette={got_hex!r}"
+            )
+    extra = sorted(set(palette_tokens) - set(contract_tokens))
+    if extra:
+        problems.append(
+            "palette doc has token row(s) the contract §2 table does not name: "
+            + ", ".join(extra)
+        )
+
+    if problems:
+        return "; ".join(problems)
     return None
 
 
@@ -341,6 +503,18 @@ def main(argv: list[str] | None = None) -> int:
             failures.append(item)
         else:
             print(f"PASS  {item} (checksum OK)")
+            n_pass += 1
+
+    # --- palette token->role/hue/hex drift vs. the contract §2 table (ADR-0005 D7/WP-3) ---
+    if contract_file.exists():
+        item = "reference/color-palettes/color-palettes.md"
+        problem = _palette_contract_drift_problem(root)
+        if problem:
+            print(f"FAIL  {item}: {problem}")
+            n_fail += 1
+            failures.append(item)
+        else:
+            print(f"PASS  {item} (palette matches contract §2)")
             n_pass += 1
 
     total = n_pass + n_fail + n_skip
