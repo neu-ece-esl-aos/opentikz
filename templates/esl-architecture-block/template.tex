@@ -107,8 +107,17 @@
   % named \coordinate so it can be a "right=of"/"above=of" positioning anchor.
   \coordinate (tilemid) at ($(tile1.north)!0.5!(tile2.north)$);
   \node[terminal node, above=18pt of tilemid] (io) {\iolabel};
-  \draw[interbus] (tile1.north) -- (io);
-  \draw[interbus] (tile2.north) -- (io);
+  % orthogonal trunk-and-branch routing (contract §3a #5 typed-routing:
+  % "orthogonal, no stray crossings"; architecture realization: "orthogonal
+  % intra/inter-bus at ports") -- a straight tile.north -- io diagonal was
+  % the pre-existing cp-4856-port defect this replaces. \railmid sits at the
+  % vertical midpoint between the tile tops and io, sharing io's x (both are
+  % derived from tilemid, which io is centered above), so the horizontal
+  % trunk and the vertical drop to io meet cleanly with no diagonal segment.
+  \coordinate (railmid) at ($(tilemid)!0.5!(io)$);
+  \draw[interbus] (tile1.north) -- (tile1.north -| railmid)
+    -- (tile2.north -| railmid) -- (tile2.north);
+  \draw[interbus] (railmid) -- (io);
   \node[font=\tiny, text=inter-bus!70!black, above=6pt of io] {\interbuslabel};
 
 \end{tikzpicture}

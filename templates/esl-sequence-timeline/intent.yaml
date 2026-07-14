@@ -1,0 +1,65 @@
+slug: esl-sequence-timeline
+family: flow
+subject: a small set of lifelines registered against one shared, pinned time axis with cross-lifeline sync messages
+thesis: every lifeline reads its events off the same pinned time axis, so two events at the same visual depth are guaranteed to be simultaneous -- the axis, not the lifelines, is what carries the figure's timing claim
+visual_argument: "the time axis sits pinned on the left margin with one tick per depth (pinned-axis primitive - the contract's own timeline example); every lifeline is drawn as a dashed vertical drop from an aligned head row (alignment-symmetry: aligned lifelines) so two lifelines' events at the same depth land on the same horizontal gridline without either lifeline naming a coordinate; a sync-marker on every lifeline at one shared depth shows a barrier event lining up across all lifelines at once, and two life-messages crossing between lifelines at their own depths show ordinary point-to-point timing"
+entities:
+  - name: time axis
+    role: the one shared time axis every lifeline and message registers against
+    component: time-axis
+    nodes: ["timeaxis"]
+  - name: lifeline
+    role: an actor/object's time extent, generated as a row of aligned lifelines
+    component: lifeline
+    nodes: ["lifeline-<i>"]
+  - name: sync marker
+    role: a shared barrier event marked on every lifeline at one common depth
+    component: sync-marker
+    nodes: ["sync-<i>"]
+relationships:
+  - from: "lifeline-<i>"
+    to: timeaxis
+    carries: shared depth alignment (pinned-axis)
+  - from: "lifeline-1"
+    to: "lifeline-2"
+    carries: a request life-message at depth 1
+  - from: "lifeline-2"
+    to: "lifeline-3"
+    carries: an acknowledgement life-message at depth 3
+check_questions:
+  - "Do all lifelines start from the same aligned head row?"
+  - "Does every sync-marker at the shared barrier depth line up on one horizontal gridline?"
+  - "Can a reader tell which two lifelines each life-message connects and at what depth?"
+  - "Is the time axis visually distinct from the lifelines it pins?"
+provenance:
+  sources:
+    - "contract/backend-contract-v1.2.0.md §1b timeline/sequence vocabulary row"
+    - "contract/backend-contract-v1.2.0.md §3a pinned-axis primitive (flow/DAG/timeline realization: shared time axis)"
+  constraints:
+    - "ADR-0005 D3 §1b row: 1:1 node_naming correspondence with the contract component vocabulary"
+    - "ADR-0005 D5: array scaling stays foreach-driven, no hard-coded node counts"
+parameters:
+  - name: "\\nlifelines"
+    type: int
+    meaning: number of lifelines generated in the row
+    default: "3"
+  - name: "\\nevents"
+    type: int
+    meaning: number of time-axis depth ticks the lifelines drop through
+    default: "4"
+  - name: "\\syncdepth"
+    type: int
+    meaning: the shared depth every lifeline's sync-marker is placed at
+    default: "2"
+  - name: "\\lifelinegap"
+    type: length-cm
+    meaning: horizontal gap between successive lifelines
+    default: "1.3"
+  - name: "\\depthgap"
+    type: length-cm
+    meaning: vertical gap between successive time-axis depths
+    default: "0.65"
+  - name: "\\lifelineprefix"
+    type: text
+    meaning: lifeline head label prefix; rendered as "<prefix><index>"
+    default: "P"
