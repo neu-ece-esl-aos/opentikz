@@ -21,8 +21,8 @@
       {"name": "\\tilelabelprefix", "type": "text", "meaning": "tile label prefix", "default": "T"},
       {"name": "\\memlabel", "type": "text", "meaning": "shared mem-block label (use \\\\ for two lines)"}
     ],
-    "node_naming": "tile: (tile-<t>); pe: (pe-<t>-<k>); mem-block: (mem)",
-    "styles": ["pe", "tilebox", "tilelabel", "memblock", "intrabus", "interbus"],
+    "node_naming": "tile: tile-<t> (generated, index-addressable); pe: pe-<t>-<k> (generated, index-addressable); mem-block: (mem)",
+    "styles": ["pe", "tilebox", "tilelabel", "memblock", "intrabus", "interbus", "fit margins"],
     "operations": [
       {"id": "resize-array", "summary": "edit \\ntiles and/or \\pespertile -- the generator re-derives every node name and position; no coordinate ever needs hand-editing"},
       {"id": "resize-spacing", "summary": "\\pesize/\\pegap for PE sizing and intra-tile density; \\tilegap for inter-tile density; \\memheight to raise/lower the pinned mem-block row"},

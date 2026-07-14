@@ -32,13 +32,26 @@
     >=Stealth,
     pe/.style={draw, thick, rectangle, minimum size=\pesize cm, inner sep=0pt,
       draw=core-accent!80!black, fill=core-accent!25, font=\tiny, align=center},
-    tilebox/.style={draw=core-accent!70!black, rounded corners=3pt, inner sep=6pt},
+    tilebox/.style={draw=core-accent!70!black, rounded corners=3pt},
     tilelabel/.style={font=\scriptsize\bfseries, text=core-accent!55!black},
     memblock/.style={draw=digitaldomain!80!black, thick, rectangle, rounded corners=2pt,
       fill=digitaldomain!18, minimum width=1.6cm, minimum height=0.7cm,
       font=\scriptsize, align=center},
     intrabus/.style={draw=intra-bus, thick},
     interbus/.style={draw=inter-bus, thick, dashed},
+    % --- fit-margins helper (grafted verbatim from tikzsetup.tex via
+    % esl-architecture-block/esl-mpsoc-tile-array): a fit box needs MORE
+    % headroom above its contents than on its other sides, so the corner
+    % label (drawn outside the fit box, not inside it) never overlaps the
+    % topmost contained node -- the label-vs-PE collision this replaces.
+    fit margins/.style={/tikz/afit/.cd,#1,
+      /tikz/.cd,
+      inner xsep=\pgfkeysvalueof{/tikz/afit/left}+\pgfkeysvalueof{/tikz/afit/right},
+      inner ysep=\pgfkeysvalueof{/tikz/afit/top}+\pgfkeysvalueof{/tikz/afit/bottom},
+      xshift=-\pgfkeysvalueof{/tikz/afit/left}+\pgfkeysvalueof{/tikz/afit/right},
+      yshift=-\pgfkeysvalueof{/tikz/afit/bottom}+\pgfkeysvalueof{/tikz/afit/top}},
+    afit/.cd, left/.initial=6pt, right/.initial=6pt,
+    bottom/.initial=6pt, top/.initial=16pt,
   ]
 
   % --- pitch: uniform spacing between successive tile origins ---
@@ -56,7 +69,7 @@
       \xdef\tilefitlist{\tilefitlist(pe-\t-\k)}
     }
     \begin{scope}[on background layer]
-      \node[tilebox, fit=\tilefitlist] (tile-\t) {};
+      \node[tilebox, fit margins={}, fit=\tilefitlist] (tile-\t) {};
     \end{scope}
     \node[tilelabel, anchor=north west]
       at ([xshift=2pt,yshift=-2pt]tile-\t.north west) {\tilelabelprefix\t};
@@ -77,18 +90,17 @@
   % orthogonal trunk-and-branch routing (contract §3a #5 typed-routing:
   % "orthogonal, no stray crossings"; architecture realization: "orthogonal
   % intra/inter-bus at ports") -- a straight tile.north -- mem diagonal per
-  % tile was this template's first draft, copying esl-architecture-block's
-  % pre-fix defect; replaced with vertical tile stubs into one shared
-  % horizontal rail, then one vertical drop into mem. \railmid sits at the
-  % vertical midpoint between the tile-top row and mem, sharing mem's x (mem
-  % is centered above rowmid, and railmid is derived from rowmid), so every
-  % stub, the rail, and the drop meet with no diagonal segment.
-  \coordinate (railmid) at ($(rowmid)!0.5!(mem)$);
+  % tile was this template's first draft. \rail sits 10pt above the tile
+  % tops (rowmid) -- clear of the tiles' own border -- and well below mem,
+  % so the riser/rail/stem segments never coincide with either (an earlier
+  % attempt placed the rail AT rowmid's own height, which is the tile
+  % boxes' own border height -- it ran directly on top of them).
+  \coordinate (rail) at ($(rowmid)+(0,10pt)$);
   \foreach \t in {1,...,\ntiles} {
-    \draw[interbus] (tile-\t.north) -- (tile-\t.north -| railmid);
+    \draw[interbus] (tile-\t.north) -- (tile-\t.north |- rail);
   }
-  \draw[interbus] (tile-1.north -| railmid) -- (tile-\ntiles.north -| railmid);
-  \draw[interbus] (railmid) -- (mem);
+  \draw[interbus] (tile-1.north |- rail) -- (tile-\ntiles.north |- rail);
+  \draw[interbus] (rail) -- (mem);
 
 \end{tikzpicture}
 \end{document}

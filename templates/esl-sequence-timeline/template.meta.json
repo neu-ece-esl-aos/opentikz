@@ -19,7 +19,7 @@
       {"name": "\\depthgap", "type": "length-cm", "meaning": "vertical gap between successive time-axis depths", "default": "0.65"},
       {"name": "\\lifelineprefix", "type": "text", "meaning": "lifeline head label prefix; rendered as \"<prefix><index>\"", "default": "P"}
     ],
-    "node_naming": "time-axis: (timeaxis); lifeline: (lifeline-<i>); sync-marker: (sync-<i>)",
+    "node_naming": "time-axis: (timeaxis); lifeline: lifeline-<i> (generated, index-addressable); sync-marker: sync-<i> (generated, index-addressable)",
     "styles": ["lifelinehead", "lifelinedrop", "syncmarker", "lifemsg", "msglabel", "axisline", "axistick", "axislabel", "timeaxistitle"],
     "operations": [
       {"id": "resize-lifelines", "summary": "edit \\nlifelines -- the generator re-derives every lifeline node name and position; no coordinate ever needs hand-editing"},

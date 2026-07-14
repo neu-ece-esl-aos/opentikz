@@ -11,11 +11,15 @@ entities:
   - name: lifeline
     role: an actor/object's time extent, generated as a row of aligned lifelines
     component: lifeline
-    nodes: ["lifeline-<i>"]
+    node_family:
+      stem: lifeline
+      indices: [i]
   - name: sync marker
     role: a shared barrier event marked on every lifeline at one common depth
     component: sync-marker
-    nodes: ["sync-<i>"]
+    node_family:
+      stem: sync
+      indices: [i]
 relationships:
   - from: "lifeline-<i>"
     to: timeaxis
