@@ -20,7 +20,10 @@
 \def\tilelabelprefix{T} % tile label prefix; rendered as "<prefix><row>.<col>"
 \def\pelabelmode{index} % index|none -- legibility control for PE-node text at scale
 \def\tilegapx{0.9}      % gap between tile boundary boxes, horizontal (cm)
-\def\tilegapy{0.9}      % gap between tile boundary boxes, vertical (cm)
+\def\tilegapy{1.3}      % gap between tile boundary boxes, vertical (cm) --
+                        % must clear the fit box's own top/bottom margins
+                        % (see "fit margins" below, ~0.7cm together) so a
+                        % tile's corner label never nears the tile above it
 \def\pegap{0.15}        % gap between PEs within a tile (cm)
 \def\pesize{0.5}        % PE node minimum size (cm)
 \def\showmesh{1}        % 1 = draw inter-tile mesh bus (NoC) to right/below neighbor; 0 = omit
@@ -34,11 +37,22 @@
     >=Stealth,
     pe/.style={draw, thick, rectangle, minimum size=\pesize cm, inner sep=0pt,
       draw=Aquamarine!80!black, fill=Aquamarine!25, font=\tiny, align=center},
-    tilebox/.style={draw=Aquamarine!70!black, dashed, rounded corners=3pt,
-      inner sep=6pt},
+    tilebox/.style={draw=Aquamarine!70!black, dashed, rounded corners=3pt},
     tilelabel/.style={font=\scriptsize\bfseries, text=Aquamarine!55!black},
     intrabus/.style={draw, Orange, thick},
     interbus/.style={draw, NavyBlue, thick, dashed},
+    % --- fit-margins helper, grafted verbatim from tikzsetup.tex via
+    % esl-architecture-block: a fit box needs MORE headroom above its
+    % contents than on its other sides, so the corner label (drawn outside
+    % the fit box, not inside it) never overlaps the topmost contained node.
+    fit margins/.style={/tikz/afit/.cd,#1,
+      /tikz/.cd,
+      inner xsep=\pgfkeysvalueof{/tikz/afit/left}+\pgfkeysvalueof{/tikz/afit/right},
+      inner ysep=\pgfkeysvalueof{/tikz/afit/top}+\pgfkeysvalueof{/tikz/afit/bottom},
+      xshift=-\pgfkeysvalueof{/tikz/afit/left}+\pgfkeysvalueof{/tikz/afit/right},
+      yshift=-\pgfkeysvalueof{/tikz/afit/bottom}+\pgfkeysvalueof{/tikz/afit/top}},
+    afit/.cd, left/.initial=4pt, right/.initial=4pt,
+    bottom/.initial=4pt, top/.initial=16pt,
   ]
 
   % --- pitch: uniform spacing between successive tile origins, derived from the
@@ -68,21 +82,44 @@
       }
       % containment: the fit box is declared after every PE it fits, on the
       % background layer, so it sits behind them (primitive: containment).
+      % fit margins reserves extra headroom on top (see style def above) so
+      % the corner label below never overlaps the topmost PE row.
       \begin{scope}[on background layer]
-        \node[tilebox, fit=\tilefitlist] (tile-\r-\c) {};
+        \node[tilebox, fit margins={}, fit=\tilefitlist] (tile-\r-\c) {};
       \end{scope}
       \node[tilelabel, anchor=north west]
         at ([xshift=2pt,yshift=-2pt]tile-\r-\c.north west)
         {\tilelabelprefix\r.\c};
-      % intra-tile bus: a light reading-order chain across this tile's PEs
-      % (primitive: relative-placement / typed-routing within the container).
-      \pgfmathtruncatemacro{\npes}{\pegridrows*\pegridcols}
-      \ifnum\npes>1
-        \foreach \k in {2,...,\npes} {
-          \pgfmathtruncatemacro{\kprev}{\k-1}
-          \draw[intrabus] (pe-\r-\c-\kprev) -- (pe-\r-\c-\k);
-        }
-      \fi
+      % intra-tile bus: an orthogonal lattice across this tile's PE sub-grid
+      % -- a horizontal edge between every same-row neighbor pair and a
+      % vertical edge between every same-column neighbor pair, so no segment
+      % is ever diagonal (primitive: typed-routing, "orthogonal, no stray
+      % crossings" -- contract §3a #5; a boustrophedon reading-order chain
+      % was tried first and rejected because its row-wrap edge is diagonal).
+      \foreach \pr in {1,...,\pegridrows} {
+        \ifnum\pegridcols>1
+          \foreach \pc in {1,...,\pegridcols} {
+            \ifnum\pc<\pegridcols
+              \pgfmathtruncatemacro{\ka}{(\pr-1)*\pegridcols+\pc}
+              \pgfmathtruncatemacro{\pcnext}{\pc+1}
+              \pgfmathtruncatemacro{\kb}{(\pr-1)*\pegridcols+\pcnext}
+              \draw[intrabus] (pe-\r-\c-\ka) -- (pe-\r-\c-\kb);
+            \fi
+          }
+        \fi
+      }
+      \foreach \pc in {1,...,\pegridcols} {
+        \ifnum\pegridrows>1
+          \foreach \pr in {1,...,\pegridrows} {
+            \ifnum\pr<\pegridrows
+              \pgfmathtruncatemacro{\ka}{(\pr-1)*\pegridcols+\pc}
+              \pgfmathtruncatemacro{\prnext}{\pr+1}
+              \pgfmathtruncatemacro{\kb}{(\prnext-1)*\pegridcols+\pc}
+              \draw[intrabus] (pe-\r-\c-\ka) -- (pe-\r-\c-\kb);
+            \fi
+          }
+        \fi
+      }
     }
   }
 
