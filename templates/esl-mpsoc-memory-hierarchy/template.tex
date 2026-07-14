@@ -1,0 +1,94 @@
+% esl-mpsoc-memory-hierarchy — an MPSoC tile array sharing one memory block over a pinned inter-tile bus
+% THESIS: only the shared memory block crosses tile boundaries -- every PE stays local to its tile -- so the single inter-bus fan-in reveals the design's memory-boundedness at a glance
+% sources: tsarilp-pub doc/common/tikzsetup.tex; cp-4856 esl-architecture-block PoC graft; cp-4892 esl-mpsoc-tile-array foreach generator layer
+% constraints: ADR-0005 D3 §1b row: 1:1 node_naming correspondence with the contract component vocabulary; ADR-0005 D5: array scaling stays foreach-driven, no hard-coded node counts
+\documentclass[border=8pt]{standalone}
+
+% --- packages (mirror these in template.meta.json "requires") ---
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc, backgrounds, fit, positioning, arrows.meta}
+
+% --- palette: ESL domain-semantic tokens (contract §2, ADR-0005 D7) ---
+\colorlet{core-accent}{Aquamarine}     % PE fill accent
+\colorlet{intra-bus}{Orange}           % intra-tile interconnect
+\colorlet{inter-bus}{NavyBlue}         % inter-tile interconnect
+\colorlet{digitaldomain}{gray}         % shared memory block (digital storage)
+
+\begin{document}
+% ==== parameters (edit these; this is the \foreach generator's parameter surface —
+% nothing below this block should ever be edited to change array shape/size) =====
+\def\ntiles{3}          % number of tiles in the row
+\def\pespertile{2}      % PEs per tile
+\def\tilegap{0.7}       % horizontal gap between tile boundary boxes (cm)
+\def\pegap{0.12}        % gap between PEs within a tile (cm)
+\def\pesize{0.5}        % PE node minimum size (cm)
+\def\memheight{1.6}     % vertical offset of the shared mem-block above the tile row (cm)
+\def\tilelabelprefix{T} % tile label prefix
+\def\memlabel{L2 \\ shared mem}  % shared mem-block label (use \\ for two lines)
+% =========================================================================
+
+\begin{tikzpicture}[
+    >=Stealth,
+    pe/.style={draw, thick, rectangle, minimum size=\pesize cm, inner sep=0pt,
+      draw=core-accent!80!black, fill=core-accent!25, font=\tiny, align=center},
+    tilebox/.style={draw=core-accent!70!black, rounded corners=3pt, inner sep=6pt},
+    tilelabel/.style={font=\scriptsize\bfseries, text=core-accent!55!black},
+    memblock/.style={draw=digitaldomain!80!black, thick, rectangle, rounded corners=2pt,
+      fill=digitaldomain!18, minimum width=1.6cm, minimum height=0.7cm,
+      font=\scriptsize, align=center},
+    intrabus/.style={draw=intra-bus, thick},
+    interbus/.style={draw=inter-bus, thick, dashed},
+  ]
+
+  % --- pitch: uniform spacing between successive tile origins ---
+  \pgfmathsetmacro{\pestep}{\pesize+\pegap}
+  \pgfmathsetmacro{\tilepitch}{\pespertile*\pestep+\tilegap}
+
+  % ==== generator: tile row x { PE row, containment fit box } (contract:
+  % tile ⊃ pe, primitive containment; §3a) ====
+  \foreach \t in {1,...,\ntiles} {
+    \pgfmathsetmacro{\ox}{(\t-1)*\tilepitch}
+    \def\tilefitlist{}
+    \foreach \k in {1,...,\pespertile} {
+      \pgfmathsetmacro{\px}{\ox+(\k-1)*\pestep}
+      \node[pe] (pe-\t-\k) at (\px,0) {\k};
+      \xdef\tilefitlist{\tilefitlist(pe-\t-\k)}
+    }
+    \begin{scope}[on background layer]
+      \node[tilebox, fit=\tilefitlist] (tile-\t) {};
+    \end{scope}
+    \node[tilelabel, anchor=north west]
+      at ([xshift=2pt,yshift=-2pt]tile-\t.north west) {\tilelabelprefix\t};
+    % intra-tile bus: solid chain across this tile's PEs (relative-placement
+    % within the container)
+    \ifnum\pespertile>1
+      \foreach \k in {2,...,\pespertile} {
+        \pgfmathtruncatemacro{\kprev}{\k-1}
+        \draw[intrabus] (pe-\t-\kprev) -- (pe-\t-\k);
+      }
+    \fi
+  }
+
+  % ==== shared mem-block, pinned along one fixed row above every tile
+  % (pinned-axis primitive, §3a: "interface/port row pinned on a tile edge") ====
+  \coordinate (rowmid) at ($(tile-1.north)!0.5!(tile-\ntiles.north)$);
+  \node[memblock, above=\memheight cm of rowmid] (mem) {\memlabel};
+  % orthogonal trunk-and-branch routing (contract §3a #5 typed-routing:
+  % "orthogonal, no stray crossings"; architecture realization: "orthogonal
+  % intra/inter-bus at ports") -- a straight tile.north -- mem diagonal per
+  % tile was this template's first draft, copying esl-architecture-block's
+  % pre-fix defect; replaced with vertical tile stubs into one shared
+  % horizontal rail, then one vertical drop into mem. \railmid sits at the
+  % vertical midpoint between the tile-top row and mem, sharing mem's x (mem
+  % is centered above rowmid, and railmid is derived from rowmid), so every
+  % stub, the rail, and the drop meet with no diagonal segment.
+  \coordinate (railmid) at ($(rowmid)!0.5!(mem)$);
+  \foreach \t in {1,...,\ntiles} {
+    \draw[interbus] (tile-\t.north) -- (tile-\t.north -| railmid);
+  }
+  \draw[interbus] (tile-1.north -| railmid) -- (tile-\ntiles.north -| railmid);
+  \draw[interbus] (railmid) -- (mem);
+
+\end{tikzpicture}
+\end{document}

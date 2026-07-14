@@ -1,0 +1,38 @@
+{
+  "id": "esl-sequence-timeline",
+  "name": "ESL lifeline sequence over a shared pinned time axis",
+  "type": "template",
+  "domain": ["pipeline", "esl-architecture"],
+  "tags": ["timeline", "sequence", "lifeline", "sync marker", "life message", "pinned axis", "foreach", "generator", "array-scale"],
+  "venue": ["DAC", "ICCAD", "DATE", "ESWEEK"],
+  "author": "cp-4895 (WP-6, ADR-0005 D3 §1b row) -- timeline/sequence sub-family, reuses the cp-4892 \\foreach generator convention for the lifeline row",
+  "license": "CC0-1.0",
+  "requires": ["xcolor", "tikz", "calc", "shapes", "arrows.meta"],
+  "preview": "preview.svg",
+  "description": "A parametric \\nlifelines-wide row of aligned lifelines (alignment-symmetry) dropping through a shared, pinned time-axis (pinned-axis primitive -- the contract's own timeline example), with a sync-marker at one common barrier depth on every lifeline and two illustrative life-messages crossing between lifelines at their own depths. Realizes the contract §1b timeline/sequence components: time-axis, lifeline, sync-marker, life-message. Colors reuse the ESL domain-semantic scheme (process-accent=lifeline, core-accent=sync-marker, param-accent=life-message, digitaldomain=time-axis neutral structure).",
+  "edit_contract": {
+    "parameters": [
+      {"name": "\\nlifelines", "type": "int", "meaning": "number of lifelines generated in the row", "default": "3"},
+      {"name": "\\nevents", "type": "int", "meaning": "number of time-axis depth ticks the lifelines drop through", "default": "4"},
+      {"name": "\\syncdepth", "type": "int", "meaning": "the shared depth every lifeline's sync-marker is placed at", "default": "2"},
+      {"name": "\\lifelinegap", "type": "length-cm", "meaning": "horizontal gap between successive lifelines", "default": "1.3"},
+      {"name": "\\depthgap", "type": "length-cm", "meaning": "vertical gap between successive time-axis depths", "default": "0.65"},
+      {"name": "\\lifelineprefix", "type": "text", "meaning": "lifeline head label prefix; rendered as \"<prefix><index>\"", "default": "P"}
+    ],
+    "node_naming": "time-axis: (timeaxis); lifeline: (lifeline-<i>); sync-marker: (sync-<i>)",
+    "styles": ["lifelinehead", "lifelinedrop", "syncmarker", "lifemsg", "msglabel", "axisline", "axistick", "axislabel", "timeaxistitle"],
+    "operations": [
+      {"id": "resize-lifelines", "summary": "edit \\nlifelines -- the generator re-derives every lifeline node name and position; no coordinate ever needs hand-editing"},
+      {"id": "resize-depth", "summary": "edit \\nevents to extend/shorten the time axis and every lifeline's drop; the two illustrative life-messages are guarded to omit themselves if \\nlifelines or \\nevents is too small to place them"},
+      {"id": "move-sync-barrier", "summary": "edit \\syncdepth to move the shared sync-marker row to a different time-axis tick"},
+      {"id": "resize-spacing", "summary": "\\lifelinegap/\\depthgap control lifeline and axis-tick density"},
+      {"id": "relabel", "summary": "edit \\lifelineprefix for lifeline head text; life-message labels (req/ack) are hand-authored text in the two \\draw[lifemsg] calls, not a macro"},
+      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role (lifelinehead/lifelinedrop/syncmarker/lifemsg/axisline) in that role's style definition; keep the family assignments (process-accent=lifeline, core-accent=sync-marker, param-accent=life-message, digitaldomain=time-axis) unless a family settled-decisions record overrides it"}
+    ],
+    "invariants": [
+      "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+      "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+      "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
+    ]
+  }
+}

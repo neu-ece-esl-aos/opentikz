@@ -1,0 +1,40 @@
+{
+  "id": "esl-flow-pipeline",
+  "name": "ESL task fan-in + transform-stage pipeline",
+  "type": "template",
+  "domain": ["pipeline", "esl-architecture"],
+  "tags": ["flow", "dag", "task graph", "pipeline", "transform stage", "fan-in", "group box", "foreach", "generator", "array-scale"],
+  "venue": ["DAC", "ICCAD", "DATE", "ESWEEK"],
+  "author": "cp-4895 (WP-6, ADR-0005 D3 §1b row) -- flow/DAG sub-family, reuses the cp-4892 \\foreach generator convention for the stage chain",
+  "license": "CC0-1.0",
+  "requires": ["xcolor", "tikz", "calc", "shapes", "backgrounds", "fit", "positioning", "arrows.meta"],
+  "preview": "preview.svg",
+  "description": "Two task-nodes fan into a parametric \\nstages-long proc-stage pipeline (direction-axis, monotone L->R), a dashed group-box wraps a contiguous run of fused stages (containment: grouped stages), and the last stage emits a param-node output artifact placed off the main axis (relative-placement). Realizes the contract §1b flow/DAG components: task-node, proc-stage, param-node, flow-edge, group-box. Colors reuse the ESL domain-semantic scheme (core-accent=task-node, process-accent=proc-stage per its contract role \"flow transform-stage accent\", param-accent=param-node, digitaldomain=flow-edge/group-box neutral structure).",
+  "edit_contract": {
+    "parameters": [
+      {"name": "\\nstages", "type": "int", "meaning": "number of pipeline stages in the chain", "default": "4"},
+      {"name": "\\gbstart", "type": "int", "meaning": "first stage index the fused-stage group-box wraps (0 = omit the group-box)", "default": "2"},
+      {"name": "\\gbend", "type": "int", "meaning": "last stage index the fused-stage group-box wraps", "default": "3"},
+      {"name": "\\stagegap", "type": "length-cm", "meaning": "horizontal gap between successive stage boxes", "default": "0.55"},
+      {"name": "\\stagewidth", "type": "length-cm", "meaning": "stage box minimum width", "default": "1.5"},
+      {"name": "\\taskalabel", "type": "text", "meaning": "task-a label", "default": "Task A"},
+      {"name": "\\taskblabel", "type": "text", "meaning": "task-b label", "default": "Task B"},
+      {"name": "\\paramoutlabel", "type": "text", "meaning": "output artifact label", "default": "Output"},
+      {"name": "\\groupcaption", "type": "text", "meaning": "fused-stage group-box caption", "default": "fused"}
+    ],
+    "node_naming": "task-node: (task-a); task-node: (task-b); proc-stage: (stage-<i>); param-node: (param-out); group-box: (fusedgroup)",
+    "styles": ["tasknode", "procstage", "paramnode", "groupbox", "grouplabel", "flowedge"],
+    "operations": [
+      {"id": "resize-chain", "summary": "edit \\nstages -- the generator re-derives every stage node name and position; no coordinate ever needs hand-editing"},
+      {"id": "resize-group", "summary": "edit \\gbstart/\\gbend to move or resize the fused-stage group-box, or set \\gbstart to 0 to omit it entirely"},
+      {"id": "relabel", "summary": "edit \\taskalabel/\\taskblabel/\\paramoutlabel/\\groupcaption for text; stage labels are the generator's own S<i> index, not a separate macro per stage"},
+      {"id": "resize-spacing", "summary": "\\stagewidth/\\stagegap control stage box size and chain density"},
+      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role (tasknode/procstage/paramnode/flowedge/groupbox) in that role's style definition; keep the family assignments (core-accent=task-node, process-accent=proc-stage, param-accent=param-node, digitaldomain=flow-edge/group-box) unless a family settled-decisions record overrides it"}
+    ],
+    "invariants": [
+      "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+      "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+      "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
+    ]
+  }
+}

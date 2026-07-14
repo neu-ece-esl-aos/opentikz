@@ -1,0 +1,70 @@
+slug: esl-mpsoc-memory-hierarchy
+family: architecture
+subject: an MPSoC tile array sharing one memory block over a pinned inter-tile bus
+thesis: only the shared memory block crosses tile boundaries -- every PE stays local to its tile -- so the single inter-bus fan-in reveals the design's memory-boundedness at a glance
+visual_argument: each tile's PE cluster sits inside a solid-bordered containment box wired by solid intrabus edges (local, dense, cheap); every tile's top edge instead runs a single dashed interbus line up to one shared mem-block pinned along a fixed row above the tile grid, so the reader's eye is pulled to the one bottleneck node no matter how many tiles the array scales to
+entities:
+  - name: tile
+    role: a tile/cluster container that holds a row of PEs
+    component: tile
+    nodes: ["tile-<t>"]
+  - name: pe
+    role: a processing element inside a tile
+    component: pe
+    nodes: ["pe-<t>-<k>"]
+  - name: shared memory
+    role: the one cache/shared-memory block every tile's inter-bus registers against
+    component: mem-block
+    nodes: ["mem"]
+relationships:
+  - from: "pe-<t>-<k>"
+    to: "pe-<t>-<k+1>"
+    carries: intra-tile data movement (solid intrabus)
+  - from: "tile-<t>"
+    to: mem
+    carries: inter-tile memory traffic (dashed interbus, pinned-axis)
+check_questions:
+  - "Does every tile's PE cluster sit inside a visibly bounded container?"
+  - "Is the shared memory block the only node every tile connects to?"
+  - "Is the inter-tile bus visually distinct (dashed) from the intra-tile bus (solid)?"
+  - "Does the memory block sit on one fixed row regardless of tile count?"
+provenance:
+  sources:
+    - "tsarilp-pub doc/common/tikzsetup.tex"
+    - "cp-4856 esl-architecture-block PoC graft"
+    - "cp-4892 esl-mpsoc-tile-array foreach generator layer"
+  constraints:
+    - "ADR-0005 D3 §1b row: 1:1 node_naming correspondence with the contract component vocabulary"
+    - "ADR-0005 D5: array scaling stays foreach-driven, no hard-coded node counts"
+parameters:
+  - name: "\\ntiles"
+    type: int
+    meaning: number of tiles in the row
+    default: "3"
+  - name: "\\pespertile"
+    type: int
+    meaning: PEs per tile
+    default: "2"
+  - name: "\\tilegap"
+    type: length-cm
+    meaning: horizontal gap between tile boundary boxes
+    default: "0.7"
+  - name: "\\pegap"
+    type: length-cm
+    meaning: gap between PEs within a tile
+    default: "0.12"
+  - name: "\\pesize"
+    type: length-cm
+    meaning: PE node minimum size
+    default: "0.5"
+  - name: "\\memheight"
+    type: length-cm
+    meaning: vertical offset of the shared mem-block above the tile row
+    default: "1.6"
+  - name: "\\tilelabelprefix"
+    type: text
+    meaning: tile label prefix
+    default: "T"
+  - name: "\\memlabel"
+    type: text
+    meaning: "shared mem-block label (use \\\\ for two lines)"

@@ -2473,6 +2473,268 @@
     ]
   },
   {
+    "author": "cp-4895 (WP-6, ADR-0005 D3 §1b row) -- flow/DAG sub-family, reuses the cp-4892 \\foreach generator convention for the stage chain",
+    "description": "Two task-nodes fan into a parametric \\nstages-long proc-stage pipeline (direction-axis, monotone L->R), a dashed group-box wraps a contiguous run of fused stages (containment: grouped stages), and the last stage emits a param-node output artifact placed off the main axis (relative-placement). Realizes the contract §1b flow/DAG components: task-node, proc-stage, param-node, flow-edge, group-box. Colors reuse the ESL domain-semantic scheme (core-accent=task-node, process-accent=proc-stage per its contract role \"flow transform-stage accent\", param-accent=param-node, digitaldomain=flow-edge/group-box neutral structure).",
+    "domain": [
+      "pipeline",
+      "esl-architecture"
+    ],
+    "edit_contract": {
+      "invariants": [
+        "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+        "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+        "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
+      ],
+      "node_naming": "task-node: (task-a); task-node: (task-b); proc-stage: (stage-<i>); param-node: (param-out); group-box: (fusedgroup)",
+      "operations": [
+        {
+          "id": "resize-chain",
+          "summary": "edit \\nstages -- the generator re-derives every stage node name and position; no coordinate ever needs hand-editing"
+        },
+        {
+          "id": "resize-group",
+          "summary": "edit \\gbstart/\\gbend to move or resize the fused-stage group-box, or set \\gbstart to 0 to omit it entirely"
+        },
+        {
+          "id": "relabel",
+          "summary": "edit \\taskalabel/\\taskblabel/\\paramoutlabel/\\groupcaption for text; stage labels are the generator's own S<i> index, not a separate macro per stage"
+        },
+        {
+          "id": "resize-spacing",
+          "summary": "\\stagewidth/\\stagegap control stage box size and chain density"
+        },
+        {
+          "id": "recolor-role",
+          "summary": "change the domain-semantic color for a whole role (tasknode/procstage/paramnode/flowedge/groupbox) in that role's style definition; keep the family assignments (core-accent=task-node, process-accent=proc-stage, param-accent=param-node, digitaldomain=flow-edge/group-box) unless a family settled-decisions record overrides it"
+        }
+      ],
+      "parameters": [
+        {
+          "default": "4",
+          "meaning": "number of pipeline stages in the chain",
+          "name": "\\nstages",
+          "type": "int"
+        },
+        {
+          "default": "2",
+          "meaning": "first stage index the fused-stage group-box wraps (0 = omit the group-box)",
+          "name": "\\gbstart",
+          "type": "int"
+        },
+        {
+          "default": "3",
+          "meaning": "last stage index the fused-stage group-box wraps",
+          "name": "\\gbend",
+          "type": "int"
+        },
+        {
+          "default": "0.55",
+          "meaning": "horizontal gap between successive stage boxes",
+          "name": "\\stagegap",
+          "type": "length-cm"
+        },
+        {
+          "default": "1.5",
+          "meaning": "stage box minimum width",
+          "name": "\\stagewidth",
+          "type": "length-cm"
+        },
+        {
+          "default": "Task A",
+          "meaning": "task-a label",
+          "name": "\\taskalabel",
+          "type": "text"
+        },
+        {
+          "default": "Task B",
+          "meaning": "task-b label",
+          "name": "\\taskblabel",
+          "type": "text"
+        },
+        {
+          "default": "Output",
+          "meaning": "output artifact label",
+          "name": "\\paramoutlabel",
+          "type": "text"
+        },
+        {
+          "default": "fused",
+          "meaning": "fused-stage group-box caption",
+          "name": "\\groupcaption",
+          "type": "text"
+        }
+      ],
+      "styles": [
+        "tasknode",
+        "procstage",
+        "paramnode",
+        "groupbox",
+        "grouplabel",
+        "flowedge"
+      ]
+    },
+    "id": "esl-flow-pipeline",
+    "license": "CC0-1.0",
+    "name": "ESL task fan-in + transform-stage pipeline",
+    "path": "templates/esl-flow-pipeline",
+    "preview": "preview.svg",
+    "requires": [
+      "xcolor",
+      "tikz",
+      "calc",
+      "shapes",
+      "backgrounds",
+      "fit",
+      "positioning",
+      "arrows.meta"
+    ],
+    "tags": [
+      "flow",
+      "dag",
+      "task graph",
+      "pipeline",
+      "transform stage",
+      "fan-in",
+      "group box",
+      "foreach",
+      "generator",
+      "array-scale"
+    ],
+    "type": "template",
+    "venue": [
+      "DAC",
+      "ICCAD",
+      "DATE",
+      "ESWEEK"
+    ]
+  },
+  {
+    "author": "cp-4895 (WP-6, ADR-0005 D3 §1b row) -- extends the esl-mpsoc-tile-array \\foreach generator layer (cp-4892, WP-4) with the contract's mem-block component",
+    "description": "Parametric MPSoC tile row (\\ntiles), each containing a \\pespertile-wide PE sub-row (containment, solid intrabus), sharing one mem-block pinned on a fixed row above the tile grid and reached by every tile's dashed interbus edge (pinned-axis primitive). Closes the contract §1b mem-block gap left open by esl-architecture-block/esl-mpsoc-tile-array. Colors reuse the ESL domain-semantic scheme (core-accent=PE, intra-bus=Orange, inter-bus=NavyBlue dashed, digitaldomain=shared memory).",
+    "domain": [
+      "systems",
+      "esl-architecture"
+    ],
+    "edit_contract": {
+      "invariants": [
+        "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+        "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+        "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
+      ],
+      "node_naming": "tile: (tile-<t>); pe: (pe-<t>-<k>); mem-block: (mem)",
+      "operations": [
+        {
+          "id": "resize-array",
+          "summary": "edit \\ntiles and/or \\pespertile -- the generator re-derives every node name and position; no coordinate ever needs hand-editing"
+        },
+        {
+          "id": "resize-spacing",
+          "summary": "\\pesize/\\pegap for PE sizing and intra-tile density; \\tilegap for inter-tile density; \\memheight to raise/lower the pinned mem-block row"
+        },
+        {
+          "id": "relabel-memory",
+          "summary": "edit \\memlabel to rename the shared memory block (e.g. \"L1$/$L2\", \"DRAM\")"
+        },
+        {
+          "id": "recolor-role",
+          "summary": "change the domain-semantic color for a whole role (pe/tilebox/memblock/intrabus/interbus) in that role's style definition; keep the family assignments (core-accent=PE, digitaldomain=mem-block, intra-bus=Orange, inter-bus=NavyBlue-dashed) unless a family settled-decisions record overrides it"
+        }
+      ],
+      "parameters": [
+        {
+          "default": "3",
+          "meaning": "number of tiles in the row",
+          "name": "\\ntiles",
+          "type": "int"
+        },
+        {
+          "default": "2",
+          "meaning": "PEs per tile",
+          "name": "\\pespertile",
+          "type": "int"
+        },
+        {
+          "default": "0.7",
+          "meaning": "horizontal gap between tile boundary boxes",
+          "name": "\\tilegap",
+          "type": "length-cm"
+        },
+        {
+          "default": "0.12",
+          "meaning": "gap between PEs within a tile",
+          "name": "\\pegap",
+          "type": "length-cm"
+        },
+        {
+          "default": "0.5",
+          "meaning": "PE node minimum size",
+          "name": "\\pesize",
+          "type": "length-cm"
+        },
+        {
+          "default": "1.6",
+          "meaning": "vertical offset of the shared mem-block above the tile row",
+          "name": "\\memheight",
+          "type": "length-cm"
+        },
+        {
+          "default": "T",
+          "meaning": "tile label prefix",
+          "name": "\\tilelabelprefix",
+          "type": "text"
+        },
+        {
+          "meaning": "shared mem-block label (use \\\\ for two lines)",
+          "name": "\\memlabel",
+          "type": "text"
+        }
+      ],
+      "styles": [
+        "pe",
+        "tilebox",
+        "tilelabel",
+        "memblock",
+        "intrabus",
+        "interbus"
+      ]
+    },
+    "id": "esl-mpsoc-memory-hierarchy",
+    "license": "CC0-1.0",
+    "name": "ESL MPSoC tile array with shared memory hierarchy",
+    "path": "templates/esl-mpsoc-memory-hierarchy",
+    "preview": "preview.svg",
+    "requires": [
+      "xcolor",
+      "tikz",
+      "calc",
+      "backgrounds",
+      "fit",
+      "positioning",
+      "arrows.meta"
+    ],
+    "tags": [
+      "mpsoc",
+      "architecture",
+      "tile array",
+      "pe array",
+      "memory",
+      "cache",
+      "shared-memory",
+      "noc",
+      "digital",
+      "foreach",
+      "generator",
+      "array-scale"
+    ],
+    "type": "template",
+    "venue": [
+      "DAC",
+      "ICCAD",
+      "DATE",
+      "ESWEEK"
+    ]
+  },
+  {
     "author": "cp-4892 (WP-4, ADR-0005 D5) -- extends the esl-architecture-block PoC (cp-4856) with a \\foreach-driven array generator",
     "description": "Parametric MPSoC tile grid (\\ntilerows x \\ntilecols) with a PE sub-grid (\\pegridrows x \\pegridcols) contained inside each tile, generated by nested \\foreach loops rather than hand-listed nodes. Node names stay index-addressable (tile-<r>-<c>, pe-<r>-<c>-<k>) at any scale. Proven at 32+ tiles with legibility handled via pelabelmode (blank PE fill above a few tiles) and an O(tiles) inter-tile mesh (not O(tiles^2)). The tile corner-label sits in dedicated fit-box headroom (never on a contained PE) and the intra-tile bus is an orthogonal row/column lattice (never diagonal), per coordinator review. Colors reuse the esl-architecture-block domain-semantic scheme (Aquamarine=PE/core-accent, Orange=intra-bus, NavyBlue dashed=inter-bus).",
     "domain": [
@@ -2606,6 +2868,127 @@
       "noc",
       "mesh",
       "digital",
+      "foreach",
+      "generator",
+      "array-scale"
+    ],
+    "type": "template",
+    "venue": [
+      "DAC",
+      "ICCAD",
+      "DATE",
+      "ESWEEK"
+    ]
+  },
+  {
+    "author": "cp-4895 (WP-6, ADR-0005 D3 §1b row) -- timeline/sequence sub-family, reuses the cp-4892 \\foreach generator convention for the lifeline row",
+    "description": "A parametric \\nlifelines-wide row of aligned lifelines (alignment-symmetry) dropping through a shared, pinned time-axis (pinned-axis primitive -- the contract's own timeline example), with a sync-marker at one common barrier depth on every lifeline and two illustrative life-messages crossing between lifelines at their own depths. Realizes the contract §1b timeline/sequence components: time-axis, lifeline, sync-marker, life-message. Colors reuse the ESL domain-semantic scheme (process-accent=lifeline, core-accent=sync-marker, param-accent=life-message, digitaldomain=time-axis neutral structure).",
+    "domain": [
+      "pipeline",
+      "esl-architecture"
+    ],
+    "edit_contract": {
+      "invariants": [
+        "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+        "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+        "(seam: no WP-7 family settled-decisions record yet for family 'flow'; family-specific placement/style/semantic invariants project here once it lands)"
+      ],
+      "node_naming": "time-axis: (timeaxis); lifeline: (lifeline-<i>); sync-marker: (sync-<i>)",
+      "operations": [
+        {
+          "id": "resize-lifelines",
+          "summary": "edit \\nlifelines -- the generator re-derives every lifeline node name and position; no coordinate ever needs hand-editing"
+        },
+        {
+          "id": "resize-depth",
+          "summary": "edit \\nevents to extend/shorten the time axis and every lifeline's drop; the two illustrative life-messages are guarded to omit themselves if \\nlifelines or \\nevents is too small to place them"
+        },
+        {
+          "id": "move-sync-barrier",
+          "summary": "edit \\syncdepth to move the shared sync-marker row to a different time-axis tick"
+        },
+        {
+          "id": "resize-spacing",
+          "summary": "\\lifelinegap/\\depthgap control lifeline and axis-tick density"
+        },
+        {
+          "id": "relabel",
+          "summary": "edit \\lifelineprefix for lifeline head text; life-message labels (req/ack) are hand-authored text in the two \\draw[lifemsg] calls, not a macro"
+        },
+        {
+          "id": "recolor-role",
+          "summary": "change the domain-semantic color for a whole role (lifelinehead/lifelinedrop/syncmarker/lifemsg/axisline) in that role's style definition; keep the family assignments (process-accent=lifeline, core-accent=sync-marker, param-accent=life-message, digitaldomain=time-axis) unless a family settled-decisions record overrides it"
+        }
+      ],
+      "parameters": [
+        {
+          "default": "3",
+          "meaning": "number of lifelines generated in the row",
+          "name": "\\nlifelines",
+          "type": "int"
+        },
+        {
+          "default": "4",
+          "meaning": "number of time-axis depth ticks the lifelines drop through",
+          "name": "\\nevents",
+          "type": "int"
+        },
+        {
+          "default": "2",
+          "meaning": "the shared depth every lifeline's sync-marker is placed at",
+          "name": "\\syncdepth",
+          "type": "int"
+        },
+        {
+          "default": "1.3",
+          "meaning": "horizontal gap between successive lifelines",
+          "name": "\\lifelinegap",
+          "type": "length-cm"
+        },
+        {
+          "default": "0.65",
+          "meaning": "vertical gap between successive time-axis depths",
+          "name": "\\depthgap",
+          "type": "length-cm"
+        },
+        {
+          "default": "P",
+          "meaning": "lifeline head label prefix; rendered as \"<prefix><index>\"",
+          "name": "\\lifelineprefix",
+          "type": "text"
+        }
+      ],
+      "styles": [
+        "lifelinehead",
+        "lifelinedrop",
+        "syncmarker",
+        "lifemsg",
+        "msglabel",
+        "axisline",
+        "axistick",
+        "axislabel",
+        "timeaxistitle"
+      ]
+    },
+    "id": "esl-sequence-timeline",
+    "license": "CC0-1.0",
+    "name": "ESL lifeline sequence over a shared pinned time axis",
+    "path": "templates/esl-sequence-timeline",
+    "preview": "preview.svg",
+    "requires": [
+      "xcolor",
+      "tikz",
+      "calc",
+      "shapes",
+      "arrows.meta"
+    ],
+    "tags": [
+      "timeline",
+      "sequence",
+      "lifeline",
+      "sync marker",
+      "life message",
+      "pinned axis",
       "foreach",
       "generator",
       "array-scale"

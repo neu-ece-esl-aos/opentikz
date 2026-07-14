@@ -1,0 +1,94 @@
+% esl-sequence-timeline — a small set of lifelines registered against one shared, pinned time axis with cross-lifeline sync messages
+% THESIS: every lifeline reads its events off the same pinned time axis, so two events at the same visual depth are guaranteed to be simultaneous -- the axis, not the lifelines, is what carries the figure's timing claim
+% sources: contract/backend-contract-v1.2.0.md §1b timeline/sequence vocabulary row; contract/backend-contract-v1.2.0.md §3a pinned-axis primitive (flow/DAG/timeline realization: shared time axis)
+% constraints: ADR-0005 D3 §1b row: 1:1 node_naming correspondence with the contract component vocabulary; ADR-0005 D5: array scaling stays foreach-driven, no hard-coded node counts
+\documentclass[border=8pt]{standalone}
+
+% --- packages (mirror these in template.meta.json "requires") ---
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc, shapes, arrows.meta}
+
+% --- palette: ESL domain-semantic tokens (contract §2, ADR-0005 D7) ---
+\colorlet{process-accent}{NavyBlue}    % lifeline accent (a lifeline IS a process, per contract §2 role)
+\colorlet{core-accent}{Aquamarine}     % sync-marker accent (event/sync point, same accent family as task-node)
+\colorlet{param-accent}{ForestGreen}   % life-message accent (a distinct, transient edge role)
+\colorlet{digitaldomain}{gray}         % time-axis accent (neutral, structural reference)
+
+\begin{document}
+% ==== parameters (edit these; \nlifelines/\nevents drive the \foreach
+% generator -- nothing below this block should ever be edited to change
+% lifeline count or axis depth) ============================================
+\def\nlifelines{3}     % number of lifelines generated in the row
+\def\nevents{4}         % number of time-axis depth ticks the lifelines drop through
+\def\syncdepth{2}       % the shared depth every lifeline's sync-marker is placed at
+\def\lifelinegap{1.3}   % horizontal gap between successive lifelines (cm)
+\def\depthgap{0.65}     % vertical gap between successive time-axis depths (cm)
+\def\lifelineprefix{P}  % lifeline head label prefix; rendered as "<prefix><index>"
+% =========================================================================
+
+\begin{tikzpicture}[
+    font=\small,
+    >=Stealth,
+    lifelinehead/.style={draw=process-accent!75!black, fill=process-accent!15, thick,
+      rounded corners=2pt, minimum width=0.85cm, minimum height=0.5cm, font=\scriptsize},
+    lifelinedrop/.style={draw=process-accent!55!black, dashed, thick},
+    syncmarker/.style={draw=core-accent!85!black, fill=core-accent!55, circle,
+      minimum size=0.16cm, inner sep=0pt},
+    lifemsg/.style={draw=param-accent!75!black, thick, ->},
+    msglabel/.style={font=\tiny\itshape, text=param-accent!45!black},
+    axisline/.style={draw=digitaldomain!70!black, thick},
+    axistick/.style={draw=digitaldomain!70!black, thick},
+    axislabel/.style={font=\tiny, text=digitaldomain!45!black},
+    timeaxistitle/.style={font=\scriptsize\bfseries, text=digitaldomain!45!black},
+  ]
+
+  \pgfmathsetmacro{\axisoffset}{\lifelinegap*0.6}
+  \pgfmathsetmacro{\axisbottom}{-\nevents*\depthgap}
+
+  % ==== time-axis: the one shared, pinned coordinate every lifeline and
+  % message registers against (contract time-axis component; pinned-axis
+  % primitive, §3a) ====
+  \node[timeaxistitle] (timeaxis) at (-\axisoffset,0.3) {time};
+  \draw[axisline] (-\axisoffset,0) -- (-\axisoffset,\axisbottom);
+  \foreach \d in {1,...,\nevents} {
+    \pgfmathsetmacro{\ty}{-\d*\depthgap}
+    \draw[axistick] ([xshift=-2pt]-\axisoffset,\ty) -- ([xshift=2pt]-\axisoffset,\ty);
+    \node[axislabel, anchor=east] at ([xshift=-4pt]-\axisoffset,\ty) {t\d};
+  }
+
+  % ==== generator: lifeline row (alignment-symmetry: aligned lifelines) ====
+  \foreach \i in {1,...,\nlifelines} {
+    \pgfmathsetmacro{\lx}{(\i-1)*\lifelinegap}
+    \node[lifelinehead] (lifeline-\i) at (\lx,0) {\lifelineprefix\i};
+    \draw[lifelinedrop] (lifeline-\i.south) -- (\lx,\axisbottom);
+  }
+
+  % ==== sync-markers: one shared barrier depth, every lifeline (temporal
+  % analog of a task-node; alignment-symmetry across lifelines) ====
+  \pgfmathsetmacro{\syncy}{-\syncdepth*\depthgap}
+  \foreach \i in {1,...,\nlifelines} {
+    \pgfmathsetmacro{\lx}{(\i-1)*\lifelinegap}
+    \node[syncmarker] (sync-\i) at (\lx,\syncy) {};
+  }
+
+  % ==== life-messages: point-to-point timing between two lifelines at a
+  % shared depth (contract life-message; realized as an unnamed edge between
+  % two lifeline/depth coordinates, like intra-bus/inter-bus elsewhere) ====
+  \ifnum\nlifelines>1
+    \pgfmathsetmacro{\reqy}{-1*\depthgap}
+    \draw[lifemsg] (0,\reqy) -- (\lifelinegap,\reqy)
+      node[midway, above, msglabel] {req};
+  \fi
+  \ifnum\nlifelines>2
+    \ifnum\nevents>2
+      \pgfmathsetmacro{\acky}{-3*\depthgap}
+      \pgfmathsetmacro{\ackxa}{\lifelinegap}
+      \pgfmathsetmacro{\ackxb}{2*\lifelinegap}
+      \draw[lifemsg] (\ackxa,\acky) -- (\ackxb,\acky)
+        node[midway, above, msglabel] {ack};
+    \fi
+  \fi
+
+\end{tikzpicture}
+\end{document}

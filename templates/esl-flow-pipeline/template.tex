@@ -1,0 +1,90 @@
+% esl-flow-pipeline — a two-source task fan-in feeding a parametric transform-stage pipeline that emits one output artifact
+% THESIS: the pipeline reads as a single monotone left-to-right argument -- two tasks join at the pipeline's head, a run of transform stages carries the data forward with no backward edges, and one artifact box at the tail is the only thing that leaves the chain
+% sources: contract/backend-contract-v1.2.0.md §1b flow/DAG vocabulary row; cp-4892 esl-mpsoc-tile-array foreach generator layer (array-scale convention reused for the stage chain)
+% constraints: ADR-0005 D3 §1b row: 1:1 node_naming correspondence with the contract component vocabulary; ADR-0005 D3 §3a: direction-axis / containment / relative-placement / alignment-symmetry primitives realized natively, never invented
+\documentclass[border=8pt]{standalone}
+
+% --- packages (mirror these in template.meta.json "requires") ---
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{calc, shapes, backgrounds, fit, positioning, arrows.meta}
+
+% --- palette: ESL domain-semantic tokens (contract §2, ADR-0005 D7) ---
+\colorlet{core-accent}{Aquamarine}       % task-node accent (unit of work, same role family as pe/core)
+\colorlet{process-accent}{NavyBlue}      % proc-stage accent (contract §2: "flow transform-stage accent")
+\colorlet{param-accent}{ForestGreen}     % param-node accent
+\colorlet{digitaldomain}{gray}           % flow-edge + group-box (neutral, structural)
+
+\begin{document}
+% ==== parameters (edit these; \nstages/\gbstart/\gbend drive the \foreach
+% generator -- nothing below this block should ever be edited to change
+% chain length or grouping) ===============================================
+\def\nstages{4}          % number of pipeline stages in the chain
+\def\gbstart{2}          % first stage index the fused-stage group-box wraps (0 = omit)
+\def\gbend{3}            % last stage index the fused-stage group-box wraps
+\def\stagegap{0.55}      % horizontal gap between successive stage boxes (cm)
+\def\stagewidth{1.5}     % stage box minimum width (cm)
+\def\taskalabel{Task A}
+\def\taskblabel{Task B}
+\def\paramoutlabel{Output}
+\def\groupcaption{fused}
+% =========================================================================
+
+\begin{tikzpicture}[
+    font=\small,
+    >=Stealth,
+    tasknode/.style={draw=core-accent!80!black, fill=core-accent!25, thick,
+      circle, minimum size=0.65cm, font=\scriptsize, align=center},
+    procstage/.style={draw=process-accent!75!black, fill=process-accent!12, very thick,
+      rounded corners=2pt, minimum width=\stagewidth cm, minimum height=0.75cm,
+      font=\scriptsize, align=center},
+    paramnode/.style={chamfered rectangle, chamfered rectangle corners={north east},
+      draw=param-accent, fill=param-accent!20, very thick,
+      minimum width=1.2cm, minimum height=0.55cm, font=\scriptsize, align=center},
+    groupbox/.style={draw=digitaldomain!70!black, dashed, rounded corners=3pt, inner sep=7pt},
+    grouplabel/.style={font=\scriptsize\itshape, text=digitaldomain!45!black},
+    flowedge/.style={draw=digitaldomain!70!black, thick, ->},
+  ]
+
+  \pgfmathsetmacro{\pitch}{\stagewidth+\stagegap}
+
+  % ==== generator: proc-stage chain (direction-axis: monotone L->R) ====
+  \foreach \i in {1,...,\nstages} {
+    \pgfmathsetmacro{\sx}{(\i-1)*\pitch}
+    \node[procstage] (stage-\i) at (\sx,0) {S\i};
+  }
+  \ifnum\nstages>1
+    \foreach \i in {2,...,\nstages} {
+      \pgfmathtruncatemacro{\iprev}{\i-1}
+      \draw[flowedge] (stage-\iprev) -- (stage-\i);
+    }
+  \fi
+
+  % ==== task fan-in: two task-nodes stacked at the same x (alignment-symmetry),
+  % both joining stage-1 (contract task-node + flow-edge) ====
+  \pgfmathsetmacro{\taskx}{-(\stagewidth/2+0.9)}
+  \node[tasknode] (task-a) at (\taskx,0.55) {\taskalabel};
+  \node[tasknode] (task-b) at (\taskx,-0.55) {\taskblabel};
+  \draw[flowedge] (task-a) -- (stage-1);
+  \draw[flowedge] (task-b) -- (stage-1);
+
+  % ==== output artifact: relative-placement, off the main stage axis ====
+  \pgfmathsetmacro{\lastx}{(\nstages-1)*\pitch}
+  \node[paramnode, below=0.7cm of stage-\nstages] (param-out) {\paramoutlabel};
+  \draw[flowedge] (stage-\nstages) -- (param-out);
+
+  % ==== fused-stage group-box: containment over a contiguous stage run
+  % ("grouped stages", contract §3a containment primitive) ====
+  \ifnum\gbstart>0
+    \def\gbfitlist{}
+    \foreach \i in {\gbstart,...,\gbend} {
+      \xdef\gbfitlist{\gbfitlist(stage-\i)}
+    }
+    \begin{scope}[on background layer]
+      \node[groupbox, fit=\gbfitlist] (fusedgroup) {};
+    \end{scope}
+    \node[grouplabel, anchor=south] at ([yshift=2pt]fusedgroup.north) {\groupcaption};
+  \fi
+
+\end{tikzpicture}
+\end{document}
