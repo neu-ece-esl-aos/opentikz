@@ -168,7 +168,7 @@ def cmd_grammar(args: argparse.Namespace) -> int:
         print(f"{template_dir}: no settled-decisions record for family {intent.family!r} yet")
         return 0
     tex_text = tex_path.read_text(encoding="utf-8")
-    results = evaluate_template(tex_text, intent, family_record)
+    results = evaluate_template(tex_text, intent, family_record, tex_path=tex_path)
     fail = False
     for r in results:
         print(f"{r.verdict:16s} {r.rule_id:35s} {r.detail}")

@@ -33,9 +33,14 @@ than a fabricated PASS; see ``_resolve_point`` / ``AxisTracker``.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 
 from .intent import IntentRecord
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import render_selfcheck  # noqa: E402  (WP-8's compiled geometry probe -- typed-routing's authority)
 
 PASS = "PASS"
 FAIL = "FAIL"
@@ -519,6 +524,47 @@ class TemplateCtx:
     tex: str
     intent: IntentRecord
     is_generated: bool  # any entity uses node_family (vs. literal nodes)
+    tex_path: Path | None = None  # needed only for the compiled geometry probe
+    _geometry_probe: dict = field(default_factory=dict)  # memoized _geometry_probe_result
+
+
+_DIAGONAL_NODES_RE = re.compile(r"from '([^']*)' to '([^']*)'")
+
+
+def _geometry_probe_result(ctx: TemplateCtx):
+    """Run WP-8's compiled geometry probe (``tools/render_selfcheck.py``)
+    exactly once per template and cache it on ``ctx``. Returns a dict:
+    ``{"ok": bool, "diagonal_edges": [(node_a, node_b, detail), ...]}``.
+
+    This is the authoritative source for typed-routing's orthogonality
+    evidence (a REAL compile, exact PGF coordinates) -- placement_grammar.py
+    calls it rather than re-deriving orthogonality from static source
+    analysis, per cp-4883's ruling. The static ``AxisTracker``/``at(X,Y)``
+    machinery elsewhere in this module stays in use for everything
+    ``detect_diagonal_edges`` does NOT cover: tile-scoping (a graph fact, not
+    a geometric one) and the other five §3a primitives.
+    """
+    if "result" in ctx._geometry_probe:
+        return ctx._geometry_probe["result"]
+    if ctx.tex_path is None:
+        result = {"ok": False, "diagonal_edges": None}  # None = "not run", distinct from "run, found none"
+        ctx._geometry_probe["result"] = result
+        return result
+    ok, log = render_selfcheck.compile_geometry_probe(ctx.tex_path)
+    if not ok:
+        result = {"ok": False, "diagonal_edges": None}
+        ctx._geometry_probe["result"] = result
+        return result
+    node_boxes = render_selfcheck._extract_node_bboxes_texframe(log)  # noqa: SLF001 (same-package reuse, not re-derivation)
+    allow = render_selfcheck._allow_diagonal_edges(ctx.tex_path)  # noqa: SLF001
+    findings = [] if allow else render_selfcheck.detect_diagonal_edges(log, node_boxes)
+    parsed = []
+    for detail in findings:
+        m = _DIAGONAL_NODES_RE.search(detail)
+        parsed.append((m.group(1) if m else None, m.group(2) if m else None, detail))
+    result = {"ok": True, "diagonal_edges": parsed, "waived": allow}
+    ctx._geometry_probe["result"] = result
+    return result
 
 
 def _entities_by_component(ctx: TemplateCtx, component: str):
@@ -697,8 +743,59 @@ def _check_tile_fit_declared_after_members(ctx: TemplateCtx) -> RuleResult:
     return RuleResult("tile-fit-declared-after-members", PASS, "; ".join(d for _n, _ok, d in results))
 
 
+def _compiled_typed_routing_fails(ctx: TemplateCtx, relevance_fn):
+    """Every compiled diagonal-edge finding (WP-8's ``detect_diagonal_edges``,
+    via a real instrumented compile) whose two node names satisfy
+    ``relevance_fn(node_a, node_b)``. Returns ``None`` if the probe never ran
+    (no ``tex_path``, or the instrumented compile failed) so the caller can
+    fall back to the static heuristic.
+
+    Deliberately does NOT filter by this module's own static edge/path
+    parsing (``parse_edges``) -- the compiled probe sees the ACTUAL rendered
+    geometry regardless of source syntax, so an inline ``-|``/``|-``
+    coordinate-combinator route (which ``parse_edges`` can't decompose into
+    point tokens and marks ``unresolved``) is still fully checked here. This
+    is the direct consequence of cp-4883's ruling: consume the compiled
+    probe, don't gate it behind this module's weaker static parser.
+    """
+    probe = _geometry_probe_result(ctx)
+    if probe["diagonal_edges"] is None:
+        return None
+    return [
+        detail for node_a, node_b, detail in probe["diagonal_edges"]
+        if node_a and node_b and relevance_fn(node_a, node_b)
+    ]
+
+
+def _architecture_relevance(ctx: TemplateCtx, tile_entity, members, literal_map):
+    """A compiled diagonal finding is relevant to this family's bus-routing
+    rules if either endpoint resolves to a tile or a tile member -- shared
+    across intra-bus-stays-in-tile / noc-spine-between-tiles / ports-on-
+    boundaries rather than finely attributed per bus style (all three are
+    settled-decision tags on the SAME underlying orthogonality property for
+    this family, and every drawn edge in these templates is one of these
+    three kinds); a false positive here would surface a real geometric defect
+    under the "wrong" rule label, never hide one.
+    """
+    def relevance(node_a: str, node_b: str) -> bool:
+        a_base, _ = strip_anchor(node_a)
+        b_base, _ = strip_anchor(node_b)
+        ka = _resolve_container(a_base, ctx, literal_map, tile_entity, members)
+        kb = _resolve_container(b_base, ctx, literal_map, tile_entity, members)
+        return ka is not None or kb is not None
+    return relevance
+
+
 def _orthogonality_verdicts(ctx: TemplateCtx, edges: list):
-    """(fails, unknowns) detail-string lists for every segment of ``edges``.
+    """(fails, unknowns) detail-string lists for every segment of ``edges``,
+    from STATIC source analysis only.
+
+    Used for the circuit-schematic family's non-typed-routing rules
+    (``rows-are-inputs``/``cols-are-weights``, tagged direction-axis/
+    relative-placement/alignment-symmetry) -- typed-routing-tagged rules use
+    ``_compiled_typed_routing_fails`` instead (cp-4883 ruling: consume WP-8's
+    compiled ``detect_diagonal_edges``, don't re-derive orthogonality from
+    static analysis for THAT primitive specifically).
 
     Two coordinate models coexist in this fork's templates independently of
     whether the intent record uses ``nodes:`` or ``node_family:`` (that split
@@ -783,7 +880,12 @@ def _check_bus_scoping(ctx: TemplateCtx, style_name: str, rule_id: str, same_til
             scoping_violations.append(f"{edge.raw.strip()}: crosses a tile boundary (endpoints in different tiles)")
         elif not same_tile_required and same_tile:
             scoping_violations.append(f"{edge.raw.strip()}: stays within one tile (expected a cross-tile edge)")
-    ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, resolvable_edges)
+    compiled_fails = _compiled_typed_routing_fails(ctx, _architecture_relevance(ctx, tile_entity, members, literal_map))
+    if compiled_fails is not None:
+        ortho_fails, ortho_unknown = compiled_fails, []
+        unresolved = []  # the compiled probe sees real geometry regardless of source syntax -- nothing is unresolved
+    else:
+        ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, resolvable_edges)
     if scoping_violations or ortho_fails:
         return RuleResult(rule_id, FAIL, "; ".join(scoping_violations + ortho_fails))
     if ortho_unknown or unresolved:
@@ -829,7 +931,14 @@ def _check_ports_on_boundaries(ctx: TemplateCtx) -> RuleResult:
             is_tile = base in tile_names or (tile_rx is not None and tile_rx.match(base))
             if is_tile and anchor is None:
                 interior_hits.append(f"{edge.raw.strip()}: {tok!r} attaches to the tile's bare/center node, not a boundary anchor")
-    ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, resolvable_edges)
+    members = _arch_member_entities(ctx)
+    literal_map, _ = _arch_membership_map(ctx)
+    compiled_fails = _compiled_typed_routing_fails(ctx, _architecture_relevance(ctx, tile_entity, members, literal_map))
+    if compiled_fails is not None:
+        ortho_fails, ortho_unknown = compiled_fails, []
+        unresolved = []  # the compiled probe sees real geometry regardless of source syntax -- nothing is unresolved
+    else:
+        ortho_fails, ortho_unknown = _orthogonality_verdicts(ctx, resolvable_edges)
     if interior_hits or ortho_fails:
         return RuleResult("ports-on-boundaries", FAIL, "; ".join(interior_hits + ortho_fails))
     if ortho_unknown or unresolved:
@@ -932,10 +1041,18 @@ def _check_rows_cols(ctx: TemplateCtx, rule_id: str, style_name: str) -> RuleRes
 
 
 def _check_analog_digital_split(ctx: TemplateCtx) -> RuleResult:
-    has_digital_component = any(
-        e.get("component") == "adc" or "digital" in (e.get("role") or "").lower()
-        for e in ctx.intent.entities
-    ) or "adc" in ctx.tex.lower() or "digital" in ctx.intent.thesis.lower()
+    # Bug found via cp-4883 review (cp-4896): this used to ALSO match "adc" as
+    # a raw substring anywhere in the .tex, which fired on an unrelated
+    # comment citing "adcbuffer.tex" as a provenance source in
+    # esl-crossbar-kcl (a template with a purely analog sense-resistor/
+    # current-source readout -- no ADC, nothing digital at all) and produced
+    # a false FAIL every prior run reported to the coordinator as a "genuine
+    # grammar-vs-template disagreement". It never was one -- it was this
+    # checker's own false positive. The only trustworthy signal for "this
+    # template has a digital stage" is a REAL contract §1a `adc` component in
+    # the structured intent record, not a text-substring guess against prose/
+    # comments/citations.
+    has_digital_component = any(e.get("component") == "adc" for e in ctx.intent.entities)
     if not has_digital_component:
         return RuleResult(
             "analog-digital-split", NOT_APPLICABLE,
@@ -961,10 +1078,58 @@ CIRCUIT_CHECKERS: dict = {
     "analog-digital-split": _check_analog_digital_split,
 }
 
+# --- flow -------------------------------------------------------------------- #
+
+def _entity_node_pattern_relevance(ctx: TemplateCtx):
+    """A compiled diagonal finding is relevant if either endpoint's base name
+    matches ANY intent-record entity's literal nodes or node_family
+    stem/arity pattern -- family-agnostic (unlike ``_architecture_relevance``,
+    which reasons about tile/member containment specifically), for families
+    with no containment hierarchy to key off (flow)."""
+    literal_names = set()
+    family_patterns = []
+    for e in ctx.intent.entities:
+        literal_names |= set(_literal_nodes(e))
+        if "node_family" in e:
+            stem, indices = e["node_family"]["stem"], e["node_family"]["indices"]
+            family_patterns.append(_generated_name_regex(stem, len(indices)))
+
+    def relevance(node_a: str, node_b: str) -> bool:
+        for node in (node_a, node_b):
+            base, _ = strip_anchor(node)
+            if base in literal_names or any(rx.match(base) for rx in family_patterns):
+                return True
+        return False
+    return relevance
+
+
+def _check_edges_follow_data(ctx: TemplateCtx) -> RuleResult:
+    """``edges-follow-data`` tags [typed-routing, direction-axis]; only the
+    typed-routing half (no non-orthogonal segment between two named flow
+    components) is checked here via WP-8's compiled probe -- this does NOT
+    confirm an edge points the right way (producer->consumer) or that
+    crossings are minimized, both of which stay NEEDS_RENDER."""
+    fails = _compiled_typed_routing_fails(ctx, _entity_node_pattern_relevance(ctx))
+    if fails is None:
+        return RuleResult("edges-follow-data", NEEDS_RENDER, "compiled geometry probe unavailable (no tex_path, or the instrumented compile failed)")
+    if fails:
+        return RuleResult("edges-follow-data", FAIL, "; ".join(fails))
+    return RuleResult(
+        "edges-follow-data", PASS,
+        "no non-orthogonal segment found between named flow components (typed-routing evidence only -- "
+        "does not confirm edge direction follows data, or that crossings are minimized)",
+    )
+
+
+FLOW_CHECKERS: dict = {
+    "edges-follow-data": _check_edges_follow_data,
+}
+
+
 FAMILY_CHECKERS = {
     "architecture": ARCHITECTURE_CHECKERS,
     "circuit-schematic": CIRCUIT_CHECKERS,
-    "flow": {},  # no flow templates exist in this fork yet (WP-6 scope) -- nothing to register
+    "flow": FLOW_CHECKERS,
 }
 
 
@@ -972,11 +1137,18 @@ FAMILY_CHECKERS = {
 # public API
 # --------------------------------------------------------------------------- #
 
-def evaluate_template(tex_text: str, intent: IntentRecord, family_record: dict) -> list:
+def evaluate_template(tex_text: str, intent: IntentRecord, family_record: dict, tex_path: Path | None = None) -> list:
     """Evaluate every placement_grammar rule in ``family_record`` against one
-    template. Returns a list of ``RuleResult``, one per rule."""
+    template. Returns a list of ``RuleResult``, one per rule.
+
+    ``tex_path`` is optional but should be passed whenever the caller has it:
+    it's what lets a typed-routing-tagged rule consult WP-8's compiled
+    geometry probe (``tools/render_selfcheck.py``) instead of falling back to
+    this module's static coordinate heuristics. Without it, typed-routing
+    rules still get a verdict, just from the weaker static analysis.
+    """
     is_generated = any("node_family" in e for e in intent.entities)
-    ctx = TemplateCtx(tex=tex_text, intent=intent, is_generated=is_generated)
+    ctx = TemplateCtx(tex=tex_text, intent=intent, is_generated=is_generated, tex_path=tex_path)
     checkers = FAMILY_CHECKERS.get(intent.family, {})
     results = []
     for rule in family_record.get("placement_grammar", []) or []:
@@ -1002,7 +1174,9 @@ def evaluate_template(tex_text: str, intent: IntentRecord, family_record: dict) 
     return results
 
 
-def placement_grammar_problems(tex_text: str, intent: IntentRecord, family_record: dict | None) -> list:
+def placement_grammar_problems(
+    tex_text: str, intent: IntentRecord, family_record: dict | None, tex_path: Path | None = None
+) -> list:
     """FAIL-only problem strings, for wiring into tools/validate.py's blocking
     exit code. NOT_APPLICABLE/NEEDS_RENDER/PASS never block CI -- see
     ``tools/adapter/cli.py grammar`` / ``tools/ci/placement-grammar-report.sh``
@@ -1010,7 +1184,7 @@ def placement_grammar_problems(tex_text: str, intent: IntentRecord, family_recor
     if family_record is None:
         return []
     problems = []
-    for result in evaluate_template(tex_text, intent, family_record):
+    for result in evaluate_template(tex_text, intent, family_record, tex_path=tex_path):
         if result.verdict == FAIL:
             problems.append(f"placement_grammar[{result.rule_id}] violated: {result.detail}")
     return problems

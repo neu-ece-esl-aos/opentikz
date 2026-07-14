@@ -120,6 +120,6 @@ def adapter_problems(meta: dict, tex: Path, template_dir: Path, contract: Contra
     problems.extend(f"{tex}: {p}" for p in master_header_matches_intent(header, intent))
 
     # --- check 4: placement-grammar (WP-7) ------------------------------ #
-    problems.extend(placement_grammar_problems(tex_text, intent, settled_decisions))
+    problems.extend(placement_grammar_problems(tex_text, intent, settled_decisions, tex_path=tex))
 
     return problems
