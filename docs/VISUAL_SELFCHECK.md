@@ -89,27 +89,42 @@ they're already what `ci.yml` invokes.
   it isn't fooled by the inflated axis-aligned bounding box `pdftotext`
   reports for rotated text — see the function's docstring for the
   `examples/flash-attention` false-positive this was tuned against).
+- **Node/node bounding-box collision** and **non-orthogonal node-to-node
+  edges** (`detect_node_node_collisions`, `detect_diagonal_edges`), via a
+  real geometry probe: a temporary, instrumented copy of the `.tex` (never
+  the original) that hooks pgf's own path/node primitives (`\pgfpathmoveto`,
+  `\pgfpathlineto`, `every node/.append style`) to `\typeout` exact
+  coordinates during compilation. Every label in this library's convention is
+  itself a `\node` (named or anonymous), so the node-collision check ALSO
+  catches **a label overlapping a node it doesn't belong to** — the class of
+  defect that motivated this addition (see "Demonstrated catches" below) —
+  without needing `pdftotext` at all. Both checks are **scoped to
+  ESL-contract-conforming templates** (`meta.json` `domain` includes
+  `esl-architecture`) — see `_is_esl_family`'s docstring: an earlier, unscoped
+  version of the orthogonality check flagged dozens of *intentional* diagonal
+  connections in upstream content (neural-net's fully-connected layers, a GAN
+  figure's convergent arrows), where a diagonal line is the correct visual,
+  not a defect. A template may declare an explicit, reviewable opt-out via
+  `"selfcheck": {"allow_diagonal_edges": true, "allow_diagonal_edges_reason":
+  "..."}` in its `meta.json` for a genuinely intentional diagonal — a
+  committed, diff-visible waiver, never a runtime agent decision.
 
 **Mechanically checked but NOT what makes this gate trustworthy on its own:**
-these two checks are the "anything mechanically detectable" ADR-0005 §D6 asks
-CI to catch. They are real, they run today via `tools/validate.py --strict`
-/ `tools/ci/render-selfcheck-all.sh`, and they are wired for CI to run the
+these checks are the "anything mechanically detectable" ADR-0005 §D6 asks CI
+to catch. They are real, they run today via `tools/validate.py --strict` /
+`tools/ci/render-selfcheck-all.sh`, and they are wired for CI to run the
 moment Actions is enabled (see above — CI does not actually execute them
 yet). They are also narrow — see the next section for exactly what they miss.
 
 **Requires the agent (or a human) to look at the image — cannot be automated
 with the toolchain available here:**
 
-- **Symbol/node/graphic overlap** (checklist items 2-4) — the mechanical text
-  checker only sees `pdftotext`'s word boxes; it is blind to TikZ shape fills,
-  circuitikz device glyphs, wires, and backgrounds entirely. **This is not a
-  hypothetical gap**: it is exactly why the demonstrated catch below is a
-  *symbol* collision that the mechanical checker reports as clean.
-- **Label containment** (item 3) in the general case — a text bounding box
-  sitting fully inside its node's bounding box is geometrically checkable in
-  principle, but nothing in this toolchain currently extracts a TikZ node's
-  own bounding box (as opposed to a word's) to compare against; not
-  implemented.
+- **Symbol/graphic overlap involving a non-node element** (part of checklist
+  item 2) — a circuitikz bipole (`to[R]`, `to[I]`, ...) is drawn as a raw
+  path, not a named TikZ node, so it is invisible to the node-collision
+  check. **This is not a hypothetical gap**: it is exactly why the
+  `esl-crossbar-kcl` catch below (a KCL node overlapping a circuitikz device
+  symbol) is reported as mechanically clean.
 - **Legibility at a specific print size** (item 5) — resolution/scale is a
   judgment call about a target venue, not a pass/fail geometry check.
 - **The `check_questions` semantic gate** (item 6) — inherently requires
@@ -120,13 +135,15 @@ Do not treat a mechanically-clean `validate.py` run as "the figure is fine."
 The tool's own output says so explicitly (see the `note:`/`PASS` messages) —
 read the PNG anyway.
 
-## Demonstrated catch: `esl-crossbar-kcl` (fixed by WP-5/cp-4894)
+## Demonstrated catches
+
+### `esl-crossbar-kcl` (fixed by WP-5/cp-4894) — symbol overlap invisible to any mechanical check
 
 Run originally against the ported `esl-crossbar-kcl` fixture
 (`tools/render_selfcheck.py templates/esl-crossbar-kcl`): the mechanical
 checks reported **no problems** — zero overfull boxes, zero text-bbox
-overlaps. `validate.py --strict` also passed. By the "verify by compiling"
-standard alone, this template looked fine.
+overlaps, zero node-bbox collisions. `validate.py --strict` also passed. By
+the "verify by compiling" standard alone, this template looked fine.
 
 **It was not.** Reading the render (`docs/gate-demo/esl-crossbar-kcl-full.png`,
 committed evidence of the *original defect* — this PNG predates the fix and is
@@ -142,20 +159,47 @@ in **both** columns (zoomed crop, also the pre-fix state:
 - Column 2: the current-source `I_ref` circle overlapped the Σ node's circle
   outright — the two circles visually merged.
 
-This was a **symbol/node overlap** (checklist item 2), the same class of
-"compiles cleanly, visually broken" defect the cp-4856 PoC's original
-colliding-label incident demonstrated. It was found exactly the way this gate
-requires: compile, render, and *look* — the mechanical checks did not and
-structurally cannot catch it (see above). **Fixed by WP-5 (cp-4894):** the
-KCL-node-to-readout-device offset was `-1.15cm` (too short for circuitikz's
-default bipole size); `-1.8cm` clears the collision for both symbol types,
-verified by re-rendering. The scaled/broadened sibling template
-`templates/esl-crossbar-kcl-adc/` (three readout device types — resistor,
-capacitor, current source — plus an ADC stage and the domain-band/boundary
-convention) uses the same collision-free clearance from the start; its own
-render evidence is `docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-full.png`
-and `docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-readout-band-zoom.png`
+This was a **symbol/node overlap** (checklist item 2) where the "node" on one
+side is a circuitikz bipole, not a TikZ node — a real, principled toolchain
+limit (see above), not an unscoped gap that the node-collision check could
+have caught. It was found exactly the way this gate requires: compile,
+render, and *look* — the mechanical checks did not and structurally cannot
+catch it. Reported to cp-4883 and to cp-4894 (WP-5, circuit template family).
+**Fixed by WP-5 (cp-4894):** the KCL-node-to-readout-device offset was
+`-1.15cm` (too short for circuitikz's default bipole size); `-1.8cm` clears
+the collision for both symbol types, verified by re-rendering. The
+scaled/broadened sibling template `templates/esl-crossbar-kcl-adc/` (three
+readout device types — resistor, capacitor, current source — plus an ADC
+stage and the domain-band/boundary convention) uses the same collision-free
+clearance from the start; its own render evidence is
+`docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-full.png` and
+`docs/wp5-defect-fix-evidence/esl-crossbar-kcl-adc-readout-band-zoom.png`
 (600 DPI crop, ~6x a 96 DPI baseline reading size).
+
+### `esl-mpsoc-memory-hierarchy` — label-over-node, caught mechanically
+
+Coordinator review (cp-4883) surfaced a live regression in WP-4's
+`\foreach`-generator output: a tile's corner label drawn on top of its own
+contained PE node, in 3 of 3 tiles, invisible at thumbnail scale across three
+separate agent visual-inspection passes. `detect_node_node_collisions` now
+catches this class of defect **mechanically** — no agent judgment required.
+Running it against the *sibling* template `esl-mpsoc-memory-hierarchy`
+(same generator lineage, not previously known to have this defect) found a
+**live, previously-undiscovered instance**: `python3 tools/validate.py
+--strict` fails with `node 'pe-1-1' and node 'tikz@f@1' bounding boxes
+overlap 49%...` for all 3 of its tiles. Reading the render
+(`docs/gate-demo/esl-mpsoc-memory-hierarchy-full.png`, zoomed crop:
+`docs/gate-demo/esl-mpsoc-memory-hierarchy-collision-zoom.png`) confirms it:
+"T1" is drawn directly on top of PE node "1". Reported to cp-4883 and to
+whichever WP owns this template — not fixed here, per this task's scope.
+(The overlapping node's name — `tikz@f@N` — is TikZ's own auto-generated
+name for an anonymous node, not a bug in the check: this repo's corner
+labels are placed without an explicit `(name)`, and TikZ still names and
+tracks them internally.)
+
+`templates/esl-mpsoc-tile-array` — the original WP-4 defect's actual
+template, now fixed on `dev` — passes both checks cleanly, confirming no
+false positive on the corrected geometry.
 
 ## Running it yourself
 

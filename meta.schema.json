@@ -144,6 +144,23 @@
           "uniqueItems": true
         }
       }
+    },
+    "selfcheck": {
+      "type": "object",
+      "description": "Optional: explicit, reviewable opt-outs from the D6 visual-self-check gate's mechanical checks (docs/VISUAL_SELFCHECK.md). A committed, reviewable waiver -- never a runtime agent decision.",
+      "additionalProperties": false,
+      "required": ["allow_diagonal_edges_reason"],
+      "properties": {
+        "allow_diagonal_edges": {
+          "type": "boolean",
+          "description": "Exempt this template from the mechanical non-orthogonal-edge check (contract §3a typed-routing). Only meaningful for ESL-family templates (domain includes esl-architecture), which are the only ones this check runs against."
+        },
+        "allow_diagonal_edges_reason": {
+          "type": "string",
+          "description": "Why a diagonal edge is intentional here (required whenever allow_diagonal_edges is true).",
+          "minLength": 1
+        }
+      }
     }
   }
 }
