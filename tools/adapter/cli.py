@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Backend-adapter CLI: derive/inspect a template's ``edit_contract``.
 
-    python3 tools/adapter/cli.py derive   <template-dir> [--write]
-    python3 tools/adapter/cli.py check    <template-dir>
-    python3 tools/adapter/cli.py grammar  <template-dir>
+    python3 tools/adapter/cli.py derive       <template-dir> [--write]
+    python3 tools/adapter/cli.py check        <template-dir>
+    python3 tools/adapter/cli.py grammar      <template-dir>
+    python3 tools/adapter/cli.py conformance
 
 ``derive`` prints the adapter-derived ``edit_contract`` fields (or, with
 ``--write``, merges them into the template's ``template.meta.json`` in place,
@@ -13,6 +14,11 @@ enforcement checks ``tools/validate.py`` runs in CI, for one template.
 (PASS/FAIL/NOT_APPLICABLE/NEEDS_RENDER) for one template — ``validate.py``
 only surfaces FAIL as a blocking problem; this is the human-facing report of
 everything else, including what's routed to WP-8's rendered-PNG gate.
+``conformance`` runs WP-9's full contract-conformance report (ADR-0005 D3):
+§1a/§1b vocabulary coverage, §2 tokens, §3a primitives, §3b family records +
+placement grammar, §4 intent/master-header, and the anti-coupling harness —
+the same check ``tools/validate.py`` folds in as "contract-conformance
+(WP-9)", with the full per-finding breakdown.
 """
 from __future__ import annotations
 
@@ -183,6 +189,21 @@ def cmd_grammar(args: argparse.Namespace) -> int:
     return 1 if fail else 0
 
 
+def cmd_conformance(args: argparse.Namespace) -> int:
+    from adapter.conformance import run_conformance
+
+    report = run_conformance()
+    if report.ok:
+        print("PASS  contract-conformance: backend #2 is buildable from the contract alone")
+        return 0
+    for check, items in report.by_check().items():
+        print(f"FAIL  [{check}] ({len(items)})")
+        for f in items:
+            print(f"        - {f.detail}")
+    print(f"\n{len(report.findings)} conformance finding(s)")
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -199,6 +220,9 @@ def main(argv: list[str] | None = None) -> int:
     p_grammar = sub.add_parser("grammar", help="full placement-grammar verdict breakdown for a template")
     p_grammar.add_argument("template_dir")
     p_grammar.set_defaults(func=cmd_grammar)
+
+    p_conformance = sub.add_parser("conformance", help="WP-9 full contract-conformance report (coverage + anti-coupling)")
+    p_conformance.set_defaults(func=cmd_conformance)
 
     args = parser.parse_args(argv)
     return args.func(args)
