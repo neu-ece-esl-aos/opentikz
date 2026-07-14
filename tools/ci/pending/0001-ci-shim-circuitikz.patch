@@ -1,0 +1,90 @@
+From d4f099c34f4a2e7fced64865b2ad60b37ace2f3b Mon Sep 17 00:00:00 2001
+From: Gunar Schirner <schirner@users.noreply.github.com>
+Date: Tue, 14 Jul 2026 15:15:27 -0400
+Subject: [PATCH] ci: reduce ci.yml to a thin shim over tools/ci/*.sh (cp-4889)
+
+PARKED -- not pushed. Requires the operator to grant the `workflow` OAuth
+scope (gh auth refresh -s workflow) to the credential these agent sessions
+push with; GitHub rejects any push touching .github/workflows/ without it.
+Handed to cp-4883 to land once the scope is granted.
+
+Folds in: the tools/ci/*.sh generic shim loop, the dev/main branch scoping
+(pull_request/push branches, contract/** added to the paths filter), and
+the circuitikz+amsmath TeX Live packages WP-5's circuit family (and this
+WP's own esl-crossbar-kcl fixture) need to compile in CI.
+
+Verified locally: YAML parses; the shim's own loop
+(`for script in tools/ci/*.sh; do "$script"; done`) passes end to end.
+---
+ .github/workflows/ci.yml | 31 +++++++++++++++++++++++++++----
+ 1 file changed, 27 insertions(+), 4 deletions(-)
+
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 972db66..900e925 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -8,17 +8,21 @@ name: CI
+ # for the embedded PostScript specials; SVG->PNG uses rsvg-convert.
+ "on":
+   pull_request:
++    # dev is the ESL integration branch and the PR target for every work
++    # package (ADR-0005 D8); main advances only via a dev -> main PR at release.
++    branches: [dev, main]
+     paths:
+       - "icons/**"
+       - "templates/**"
+       - "examples/**"
+       - "tools/**"
++      - "contract/**"
+       - "catalog.json"
+       - "meta.schema.json"
+       - "requirements.txt"
+       - ".github/workflows/ci.yml"
+   push:
+-    branches: [main]
++    branches: [main, dev]
+ 
+ permissions:
+   contents: read
+@@ -57,6 +61,9 @@ jobs:
+         uses: TeX-Live/setup-texlive-action@v4
+         with:
+           # Mirror the local toolchain. tlmgr resolves further dependencies.
++          # circuitikz + amsmath added for the esl-crossbar-kcl circuit-schematic
++          # fixture (cp-4889/ADR-0005 WP-1) — the first circuitikz content in this
++          # fork; every other item here is generic TikZ/pgf.
+           packages: >-
+             scheme-basic
+             latex
+@@ -69,9 +76,25 @@ jobs:
+             geometry
+             varwidth
+             xkeyval
+-
+-      - name: Validate metadata + standalone compile (strict)
+-        run: python3 tools/validate.py --strict
++            circuitikz
++            amsmath
++
++      - name: Run CI checks (tools/ci/*.sh)
++        # Thin, generic shim: every executable script in tools/ci/ runs, in sorted
++        # order (validate-all.sh: schema+static+compile, which also covers the
++        # vendored-contract checksum gate now folded into tools/validate.py itself;
++        # render-all.sh: full-template-set render_preview.py pass). Later work packages
++        # (WP-3 palette-drift, WP-8 render/PNG gate, WP-9 conformance test, ...) add a
++        # new tools/ci/*.sh script and this step picks it up automatically -- no later
++        # WP needs to edit this workflow file, or the `workflow` OAuth scope required
++        # to do so. See README-ESL.md "CI logic convention".
++        run: |
++          set -euo pipefail
++          for script in tools/ci/*.sh; do
++            echo "::group::$script"
++            "$script"
++            echo "::endgroup::"
++          done
+ 
+       - name: Check catalog.json is up to date
+         run: |
+-- 
+2.34.1
+
