@@ -1,0 +1,39 @@
+{
+  "id": "esl-crossbar-kcl-adc",
+  "name": "ESL analog crossbar + KCL + ADC readout (parametric, domain-banded)",
+  "type": "template",
+  "domain": ["circuits", "esl-architecture"],
+  "tags": ["circuit-schematic", "circuitikz", "crossbar", "analog", "kcl", "adc", "current-mode", "in-memory-compute", "weight-cell", "domain-band", "domain-boundary", "foreach", "generator", "array-scale"],
+  "venue": ["ISSCC", "VLSI Symposium", "TCAS-I", "JSSC"],
+  "author": "cp-4894 (WP-5, ADR-0005 D4) -- scales esl-crossbar-kcl (cp-4856) on esl-crossbar-array's \\foreach generator (cp-4892, WP-4)",
+  "license": "CC0-1.0",
+  "requires": ["tikz", "circuitikz", "amsmath", "arrows.meta", "backgrounds", "positioning", "calc", "fit", "shapes.geometric"],
+  "preview": "preview.svg",
+  "description": "Parametric nrows x ncols VMM crossbar array (\\foreach-generated, WP-4 pattern) whose per-column KCL summation node feeds a real circuitikz readout device -- resistor, capacitor, and current source across the three default columns, broadening circuitikz coverage beyond the to[R]/to[I] pair cp-4856 exercised, mixed with the hand-styled crossbar/KCL/vsource node vocabulary (the confirmed working pattern, ADR-0005 D4) -- and an ADC (contract §1a `adc`) producing a digital output word. The analog and digital regions are drawn as shaded domain-bands (`\\domainband`) separated by a dashed domain-boundary (`\\domainboundary`), the net-new region-shading convention opentikz had no equivalent of. Fixes the ported esl-crossbar-kcl fixture's known two-colliding-symbols defect (KCL node overlapping its readout device) via adequate \\readoutgap/\\adcgap clearance, verified by rendering to PNG.",
+  "edit_contract": {
+    "parameters": [
+      {"name": "\\nrows", "type": "int", "meaning": "number of crossbar rows (VMM input rows)", "default": "2"},
+      {"name": "\\ncols", "type": "int", "meaning": "number of crossbar columns / readout-device columns", "default": "3"},
+      {"name": "\\rowgap", "type": "length-cm", "meaning": "vertical gap between input rows", "default": "1.1"},
+      {"name": "\\colgap", "type": "length-cm", "meaning": "horizontal gap between columns", "default": "1.7"},
+      {"name": "\\readoutgap", "type": "length-cm", "meaning": "clearance from a KCL node to its readout-device coordinate -- must stay large enough that the KCL node's circle does not visually overlap the readout device's circuitikz glyph (verify by rendering to PNG); this is the fix for the ported esl-crossbar-kcl fixture's known defect, which used 1.15cm", "default": "1.8"},
+      {"name": "\\adcgap", "type": "length-cm", "meaning": "clearance from a readout device to its ADC triangle -- must stay large enough that the analog and digital domain-bands do not touch or overlap, leaving room for the dashed domain-boundary between them", "default": "1.7"},
+      {"name": "\\vlabelprefix", "type": "text", "meaning": "row voltage-source label prefix", "default": "V"}
+    ],
+    "node_naming": "v-source: vin-<row> (generated, index-addressable); crossbar-cell: cell-<row>-<col> (generated, index-addressable); kcl-node: kcl-<col> (generated, index-addressable); adc: adc-<col> (generated, index-addressable); domain-band: (analogband); domain-band: (digitalband); domain-boundary: (bndL, bndR)",
+    "styles": ["kclnode", "cell", "vsource", "adcshape", "sidenote", "domainlbl", "currentlbl", "voltagelbl", "digitallbl", "awire", "dwire", "vwire"],
+    "operations": [
+      {"id": "resize-array", "summary": "edit \\nrows/\\ncols -- the generator re-derives every node name, rail, KCL node, and readout column; the readout-device \\foreach list (operations.change-readout-devices) must carry exactly \\ncols entries afterward"},
+      {"id": "change-readout-devices", "summary": "edit the `\\c/\\dev/\\devlabel in {...}` \\foreach list's <device> tokens -- any real circuitikz bipole key (R, C, I, L, ...), NOT a figstyle node style; this is the one place this template mixes circuitikz bipoles with hand-styled tikzset nodes (cp-4856's confirmed working pattern)"},
+      {"id": "adjust-readout-clearance", "summary": "if a readout device's circuitikz glyph is visually larger than the defaults tested (R/C/I), increase \\readoutgap and/or \\adcgap and re-render to PNG to confirm no symbol/node overlap before shipping -- do not shrink either below what the render confirms is collision-free"},
+      {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role by re-binding that role's palette token (e.g. \\colorlet{analogdomain}{...}); real circuitikz device glyphs (the readout devices, the ADC's outline) stay neutral/undyed -- only the hand-styled family nodes/wires and the domain-bands carry domain-semantic color"},
+      {"id": "add-domain-band", "summary": "\\domainband{name}{color-token}{fitspec}{label}{anchor} -- fitspec is normally an accumulated \\xdef list built during the generator's \\foreach loops (see \\analogfitlist/\\digitalfitlist), not a hand-typed node list; anchor should stay a \"north ...\" corner with the macro's inner sep=16pt (or larger) so the label never collides with the band's contents (verify by rendering to PNG)"},
+      {"id": "add-domain-boundary", "summary": "\\domainboundary{from}{to} between two named coordinates roughly midway between the two domain-bands -- draws the dashed divider contract §1a requires between two domains"}
+    ],
+    "invariants": [
+      "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+      "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+      "(seam: no WP-7 family settled-decisions record yet for family 'circuit-schematic'; family-specific placement/style/semantic invariants project here once it lands)"
+    ]
+  }
+}

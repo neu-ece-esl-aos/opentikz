@@ -1,0 +1,146 @@
+# Intent Record — esl-crossbar-kcl-adc
+#
+# Per-figure design record (contract §4 shape; ADR-0005 D3 §4 row). Sidecar
+# owned by the backend-adapter, not by opentikz metadata (D2). Uses the
+# adapter's `node_family` extension (see tools/adapter/intent.py) instead of
+# a literal `nodes` enumeration for every \foreach-generated entity: node_naming
+# expresses the indexed pattern, not an enumeration (cp-4883 family-wide naming
+# ruling -- dash-separated, index-addressable, coordinated with WP-4/cp-4892,
+# same convention esl-crossbar-array already uses). Commit beside template.tex;
+# validated by tools/adapter/checks.py in the verify loop.
+
+slug: esl-crossbar-kcl-adc
+family: circuit-schematic
+subject: >-
+  A parametric analog VMM crossbar array (\foreach-generated) whose
+  per-column KCL summation feeds a broadened circuitikz readout stage
+  (resistor/capacitor/current-source) and an ADC, with the analog and
+  digital domains drawn as shaded domain-bands separated by a dashed
+  domain-boundary.
+thesis: >-
+  The analog-to-digital boundary is a real, drawn place in the circuit --
+  everything left of it (crossbar, KCL summation, readout device) is analog
+  current; everything right of it is a digital word, and the
+  domain-band/domain-boundary convention makes that boundary visible, not implicit.
+visual_argument: >-
+  A shaded orange band encloses every analog element (sources, cells, KCL
+  nodes, readout devices); a shaded gray band encloses every ADC; a dashed
+  line runs between them at the exact height where each column's wire
+  crosses from one band to the other, so the reader sees the analog/digital
+  split as a drawn boundary, not an inferred one.
+
+entities:
+  - name: row voltage sources
+    role: analog input activations driving each crossbar row
+    component: v-source
+    node_family:
+      stem: vin
+      indices: [row]
+  - name: crossbar weight cells
+    role: >-
+      VMM weight cell; the full row x col grid together realizes the
+      contract's crossbar-array ("a full nrows x ncols VMM cell array,
+      placed by row/col index") -- no single node stands for the array as a
+      whole, so crossbar-array itself is not separately mapped here (same
+      convention as esl-crossbar-array, WP-4)
+    component: crossbar-cell
+    node_family:
+      stem: cell
+      indices: [row, col]
+  - name: per-column KCL summation node
+    role: physical node collecting a column's analog current
+    component: kcl-node
+    node_family:
+      stem: kcl
+      indices: [col]
+  - name: readout-device branch
+    role: >-
+      the real circuitikz device symbol (resistor / capacitor / current
+      source) each KCL node's column current branches into -- contract §1a
+      names conceptual components but not raw EE device primitives; these
+      are backend-private circuitikz realization detail (contract §5), not
+      a missing §1 component, so no `component:` mapping is claimed here.
+    nodes: [dev-1, dev-2, dev-3]
+  - name: per-column ADC
+    role: converts the readout device's analog signal into a digital word
+    component: adc
+    node_family:
+      stem: adc
+      indices: [col]
+  - name: analog domain band
+    role: shaded region enclosing every analog-domain element
+    component: domain-band
+    nodes: [analogband]
+  - name: digital domain band
+    role: shaded region enclosing every digital-domain element
+    component: domain-band
+    nodes: [digitalband]
+  - name: analog/digital domain boundary
+    role: the dashed divider between the analog and digital domain bands
+    component: domain-boundary
+    nodes: [bndL, bndR]
+
+relationships:
+  - from: row voltage sources
+    to: crossbar weight cells
+    carries: row voltage (inputdomain, vwire)
+  - from: crossbar weight cells
+    to: per-column KCL summation node
+    carries: analog cell current (analogdomain, awire)
+  - from: per-column KCL summation node
+    to: readout-device branch
+    carries: column current into the readout device
+  - from: readout-device branch
+    to: per-column ADC
+    carries: analog readout signal (digitaldomain, dwire) into the ADC's digital conversion
+
+check_questions:
+  - Can the reader see that all cells in one column feed the SAME KCL node?
+  - Does the reader see three DIFFERENT readout device types across the three columns, not just R and I?
+  - Is the analog/digital boundary a visibly drawn line, not something the reader has to infer?
+  - Does every element sit inside exactly one domain-band, with no band overlapping the other?
+
+provenance:
+  sources:
+    - esl-crossbar-kcl (cp-4856 PoC graft, analog-ai figstyle.tex conventions)
+    - esl-crossbar-array (cp-4892, WP-4 \foreach generator layer)
+  constraints: []
+
+# --- adapter extension: "what varies" (edit_contract.parameters source) --- #
+parameters:
+  - name: "\\nrows"
+    type: int
+    meaning: number of crossbar rows (VMM input rows)
+    default: "2"
+  - name: "\\ncols"
+    type: int
+    meaning: number of crossbar columns / readout-device columns
+    default: "3"
+  - name: "\\rowgap"
+    type: length-cm
+    meaning: vertical gap between input rows
+    default: "1.1"
+  - name: "\\colgap"
+    type: length-cm
+    meaning: horizontal gap between columns
+    default: "1.7"
+  - name: "\\readoutgap"
+    type: length-cm
+    meaning: >-
+      clearance from a KCL node to its readout-device coordinate -- must
+      stay large enough that the KCL node's circle does not visually
+      overlap the readout device's circuitikz glyph (verify by rendering to
+      PNG); this is the fix for the ported esl-crossbar-kcl fixture's known
+      defect, which used 1.15cm
+    default: "1.8"
+  - name: "\\adcgap"
+    type: length-cm
+    meaning: >-
+      clearance from a readout device to its ADC triangle -- must stay
+      large enough that the analog and digital domain-bands do not touch or
+      overlap, leaving room for the dashed domain-boundary between them
+    default: "1.7"
+  - name: "\\vlabelprefix"
+    type: text
+    meaning: row voltage-source label prefix
+    default: V

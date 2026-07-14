@@ -1,0 +1,12 @@
+{
+  "id": "op-amp",
+  "name": "Op-amp",
+  "type": "icon",
+  "domain": ["circuits"],
+  "tags": ["op-amp", "amplifier", "circuit", "analog", "circuitikz", "device", "esl-architecture"],
+  "author": "cp-4894 (WP-5, ADR-0005 D4)",
+  "license": "CC0-1.0",
+  "requires": ["tikz", "circuitikz"],
+  "preview": "op-amp.svg",
+  "description": "Operational-amplifier triangle (circuitikz's native `op amp` shape) with labeled +/- inputs and an output lead -- a real EE device symbol, left undyed like every other circuitikz bipole in this family (contract §1a)."
+}
