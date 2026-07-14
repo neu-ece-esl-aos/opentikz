@@ -1,0 +1,12 @@
+{
+  "id": "v-source",
+  "name": "Input voltage / activation source",
+  "type": "icon",
+  "domain": ["circuits"],
+  "tags": ["v-source", "voltage-source", "activation", "input", "analog", "circuit", "esl-architecture"],
+  "author": "cp-4894 (WP-5, ADR-0005 D4)",
+  "license": "CC0-1.0",
+  "requires": ["tikz"],
+  "preview": "v-source.svg",
+  "description": "Input voltage / activation source, per contract §1a `v-source` -- a hand-styled family node (not a circuitikz bipole), the standalone form of esl-crossbar-kcl's `vsource` style. Filled with the inputdomain token."
+}

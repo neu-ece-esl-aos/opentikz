@@ -1,0 +1,12 @@
+{
+  "id": "crossbar-cell",
+  "name": "Crossbar weight cell",
+  "type": "icon",
+  "domain": ["circuits"],
+  "tags": ["crossbar", "weight-cell", "vmm", "in-memory-compute", "analog", "circuit", "esl-architecture"],
+  "author": "cp-4894 (WP-5, ADR-0005 D4)",
+  "license": "CC0-1.0",
+  "requires": ["tikz"],
+  "preview": "crossbar-cell.svg",
+  "description": "One weight/conductance cell in a VMM crossbar array, per contract §1a `crossbar-cell`; the atomic unit esl-crossbar-array's \\foreach generator (WP-4) tiles nrows x ncols of. Filled with the weightdomain token."
+}
