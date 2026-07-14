@@ -8,13 +8,19 @@ Realizes the intent record three ways (net-new — opentikz has no analog):
    ``visual_argument``/``entities``/``relationships``/``check_questions``/
    ``provenance``); the adapter *extends* it with two adapter-owned fields
    the contract does not define: each ``entities[]`` item may carry
-   ``component`` (a §1 vocabulary id) + ``nodes`` (the concrete node names
-   in the ``.tex`` that realize it) so ``node_naming`` can be derived
-   mechanically (see ``derive.py``), and a top-level ``parameters`` list —
-   the intent record's "what varies" — is the derivation source for
-   ``edit_contract.parameters``. Neither extension widens opentikz's
-   ``edit_contract`` schema (D2); they live one layer above it, in the
-   sidecar the adapter owns.
+   ``component`` (a §1 vocabulary id) plus **one of**:
+     - ``nodes``: a literal list of concrete ``.tex`` node names (a small,
+       hand-instantiated, fixed-shape figure), or
+     - ``node_family``: ``{stem, indices}`` — an indexed-family pattern for a
+       `\foreach`-generated array at any scale (the family-wide convention,
+       cp-4883 ruling: dash-separated, index-addressable, e.g.
+       ``cell-<row>-<col>``, never concatenated digits like ``g11``, which
+       becomes ambiguous once an index exceeds 9)
+   so ``node_naming`` can be derived mechanically either way (see
+   ``derive.py``). A top-level ``parameters`` list — the intent record's
+   "what varies" — is the derivation source for ``edit_contract.parameters``.
+   None of this widens opentikz's ``edit_contract`` schema (D2); it lives one
+   layer above it, in the sidecar the adapter owns.
 2. a **master-header** comment block inside ``template.tex`` carrying
    ``subject``/``thesis``/``provenance`` (contract's master-header rule).
 3. ``edit_contract.parameters`` derived from this record (``derive.py``).

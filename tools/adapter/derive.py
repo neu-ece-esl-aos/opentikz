@@ -61,21 +61,50 @@ def strip_tex_comments(text: str) -> str:
     return "\n".join(out)
 
 
+def _render_node_family(component: str, node_family: dict) -> str:
+    """Render an *indexed family* projection: ``component: stem-<i1>-<i2> (indexed)``.
+
+    Family-wide naming ruling (cp-4883, coordinating WP-2/WP-4/WP-5): generated
+    arrays are index-addressable and dash-separated (``cell-<row>-<col>``,
+    ``tile-<row>-<col>``, ``pe-<row>-<col>-<k>``), never concatenated digits
+    (``g11``) — ambiguous once an index exceeds 9. ``node_naming`` for a
+    generated array expresses this *pattern*, not an enumeration — an
+    enumeration cannot survive a `\\foreach`-generated array of any real size.
+    """
+    stem = node_family["stem"]
+    indices = node_family["indices"]
+    pattern = "-".join([stem] + [f"<{idx}>" for idx in indices])
+    return f"{component}: {pattern} (generated, index-addressable)"
+
+
 def derive_node_naming(intent: IntentRecord, contract: Contract) -> str:
     """Project §1 component names -> concrete node names, per entity.
 
-    Only entities carrying the adapter-extension ``component`` (+ ``nodes``)
-    fields participate — those are checked against the contract's §1
-    vocabulary elsewhere (``checks.py``). Entities without a ``component``
-    are free-text per contract §4 and are not part of this mechanical view
-    (e.g. a structural node with no §1 vocabulary counterpart — record that
-    as a contract gap, don't invent a mapping).
+    Only entities carrying the adapter-extension ``component`` field
+    participate — those are checked against the contract's §1 vocabulary
+    elsewhere (``checks.py``). Entities without a ``component`` are free-text
+    per contract §4 and are not part of this mechanical view (e.g. a
+    structural node with no §1 vocabulary counterpart — record that as a
+    contract gap, don't invent a mapping).
+
+    An entity expresses its node(s) one of two ways (mutually exclusive):
+
+    - ``nodes: [...]`` — a literal enumeration of concrete node names, for a
+      small, hand-instantiated, fixed-shape figure (e.g. a 2-tile block
+      diagram). Projected as ``component: (name1, name2, ...)``.
+    - ``node_family: {stem, indices}`` — an indexed-family *pattern*, for a
+      `\\foreach`-generated array at any scale. Projected as
+      ``component: stem-<i1>-<i2> (generated, index-addressable)`` — see
+      ``_render_node_family``.
     """
     parts = []
     for entity in intent.entities_with_component():
         component = entity["component"]
-        nodes = entity.get("nodes") or []
-        parts.append(f"{component}: (" + ", ".join(nodes) + ")")
+        if "node_family" in entity:
+            parts.append(_render_node_family(component, entity["node_family"]))
+        else:
+            nodes = entity.get("nodes") or []
+            parts.append(f"{component}: (" + ", ".join(nodes) + ")")
     return "; ".join(parts)
 
 
