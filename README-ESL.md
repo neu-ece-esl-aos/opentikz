@@ -59,37 +59,51 @@ of the frozen Phase-1 backend contract — see `contract/CONTRACT.md` for the
 source of truth, the pin, and the change-control rule. This fork consumes
 that contract; it never edits it.
 
-## CI logic convention: `tools/ci/`, never `.github/workflows/`
+## CI logic convention: land gates in `tools/`, not `.github/workflows/`
 
-**Do not add CI logic to `.github/workflows/ci.yml`.** The credential these
-agent sessions push with carries `repo`/`read:org` scopes but not GitHub's
-`workflow` scope, which GitHub requires for *any* push that touches a file
-under `.github/workflows/` — so a commit that edits the workflow file cannot
-land without an operator manually running `gh auth refresh -s workflow`
-(interactive, browser-based; not something an agent can do on the operator's
-behalf). Since several later work packages land CI logic (WP-3 palette-drift
-check, WP-8 render/PNG self-check gate, WP-9 conformance test), routing all of
-it through the workflow file would hit this wall repeatedly.
+**Prefer landing new CI logic in `tools/` over editing `.github/workflows/ci.yml`.**
+The credential these agent sessions push with carries `repo`/`read:org` scopes
+but not GitHub's `workflow` scope, which GitHub requires for *any* push that
+touches a file under `.github/workflows/` — so a commit that edits the
+workflow file cannot land without an operator manually running
+`gh auth refresh -s workflow` (interactive, browser-based; not something an
+agent can do on the operator's behalf). Since several later work packages land
+CI logic (WP-3 palette-drift check, WP-8 render/PNG self-check gate, WP-9
+conformance test), routing all of it through the workflow file would hit this
+wall repeatedly. Two ways around it, in priority order:
 
-Instead, `ci.yml` is a **thin, generic shim** with one step:
+1. **Fold the check into `tools/validate.py` (or a module it imports) whenever
+   it can run alongside an already-existing CI invocation.** The unedited,
+   upstream `ci.yml` already runs `python3 tools/validate.py --strict` on
+   every PR — so a check added *inside* `validate.py` starts running in CI
+   immediately, with **zero** workflow-file edits and no `workflow` scope
+   needed. This is how the vendored-contract checksum gate is wired
+   (`_contract_checksum_problem` in `tools/validate.py`): it's not a separate
+   script, it's a few extra lines in the tool CI already calls.
+2. **For genuinely new CI steps that have no existing hook to ride along
+   with** (e.g. a full-template-set `render_preview.py` pass, WP-8's
+   rendered-PNG gate), write them as standalone, executable scripts under
+   `tools/ci/` (`validate-all.sh`, `render-all.sh`, ...), runnable both
+   locally and from CI. These are ready to wire in via a thin, generic shim
+   step:
+   ```yaml
+   - name: Run CI checks (tools/ci/*.sh)
+     run: |
+       set -euo pipefail
+       for script in tools/ci/*.sh; do
+         echo "::group::$script"
+         "$script"
+         echo "::endgroup::"
+       done
+   ```
+   but until that one shim edit lands in `ci.yml` (parked, pending the
+   operator's scope grant — see the branch/SHA noted in the cp-4889 PR),
+   `tools/ci/*.sh` scripts are **not yet invoked by CI** — they exist for
+   local runs and are ready to be picked up automatically (sorted by
+   filename, no further `ci.yml` edits) the moment the shim step lands.
 
-```yaml
-- name: Run CI checks (tools/ci/*.sh)
-  run: |
-    set -euo pipefail
-    for script in tools/ci/*.sh; do
-      echo "::group::$script"
-      "$script"
-      echo "::endgroup::"
-    done
-```
-
-Every check is a standalone, executable script under `tools/ci/`
-(`validate-all.sh`, `check-contract-checksum.sh`, `render-all.sh`, ...),
-runnable both in CI and locally (`./tools/ci/validate-all.sh`). **A later work
-package that needs a new CI gate adds a new `tools/ci/*.sh` script and nothing
-else** — the shim picks it up automatically, sorted by filename, with no edit
-to `ci.yml` and therefore no `workflow` scope required. Only touch `ci.yml`
-itself for things that are inescapably workflow-level (a new system
-dependency for the TeX Live install, a trigger/branch change) — and expect
-that one commit to need the operator's scope grant to land.
+**Known gap until the shim lands:** the upstream `ci.yml`'s `pull_request:
+paths:` filter does not include `contract/**`, so a PR that only touches
+`contract/` (no `icons/`/`templates/`/`examples/`/`tools/` change) does not
+trigger CI at all. The parked `ci.yml` commit also adds `contract/**` to that
+filter.

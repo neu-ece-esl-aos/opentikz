@@ -23,6 +23,7 @@ Exit code is non-zero if any item FAILs.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import shutil
 import subprocess
@@ -151,6 +152,34 @@ def _edit_contract_problems(meta: dict, tex: Path) -> list[str]:
             )
 
     return problems
+
+
+_CONTRACT_SHA256_RE = re.compile(r"```\n([0-9a-f]{64})\n```")
+
+
+def _contract_checksum_problem(root: Path) -> str | None:
+    """Check contract/backend-contract-v1.2.0.md against the sha256 pinned in
+    contract/CONTRACT.md (ADR-0005 D2/D3: the frozen backend contract is consumed
+    read-only; this is the drift gate for that vendored copy). Returns a problem
+    string, or None if it matches -- or if contract/ hasn't been vendored yet
+    (this check is a no-op before WP-1 lands it, and for any repo state that never
+    carries a vendored contract)."""
+    contract_file = root / "contract" / "backend-contract-v1.2.0.md"
+    contract_doc = root / "contract" / "CONTRACT.md"
+    if not contract_file.exists() or not contract_doc.exists():
+        return None
+    m = _CONTRACT_SHA256_RE.search(contract_doc.read_text(encoding="utf-8"))
+    if not m:
+        return "contract/CONTRACT.md has no pinned sha256 fenced code block"
+    pin = m.group(1)
+    actual = hashlib.sha256(contract_file.read_bytes()).hexdigest()
+    if pin != actual:
+        return (
+            f"contract/backend-contract-v1.2.0.md checksum drift: "
+            f"pinned={pin} actual={actual} -- see contract/CONTRACT.md change-control "
+            "(never edit the vendored copy in place; re-vendor from the source of truth)"
+        )
+    return None
 
 
 def _load_validator(root: Path):
@@ -300,6 +329,19 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"        {line}")
             n_fail += 1
             failures.append(item)
+
+    # --- vendored contract checksum (not a catalog item; runs once per invocation) ---
+    contract_file = root / "contract" / "backend-contract-v1.2.0.md"
+    if contract_file.exists():
+        item = rel(contract_file, root)
+        problem = _contract_checksum_problem(root)
+        if problem:
+            print(f"FAIL  {item}: {problem}")
+            n_fail += 1
+            failures.append(item)
+        else:
+            print(f"PASS  {item} (checksum OK)")
+            n_pass += 1
 
     total = n_pass + n_fail + n_skip
     print(
