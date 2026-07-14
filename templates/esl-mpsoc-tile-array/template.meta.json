@@ -24,8 +24,8 @@
       {"name": "\\pesize", "type": "length-cm", "meaning": "PE node minimum size", "default": "0.5"},
       {"name": "\\showmesh", "type": "bool(0,1)", "meaning": "1 draws the inter-tile NoC mesh (right/below neighbor only, O(tiles)); 0 omits it entirely", "default": "1"}
     ],
-    "node_naming": "generated, index-addressable, 1:1 with contract §1b: tile-<r>-<c> is the tile/cluster container (contract component `tile`), 1-based row,col over the \\ntilerows x \\ntilecols grid; pe-<r>-<c>-<k> is a processing element (contract component `pe`) inside tile (r,c), 1-based flat index k (row-major) over that tile's \\pegridrows x \\pegridcols sub-grid. This extends esl-architecture-block's fixed \"role+tile-index\" naming (core1, acc1, ...) to full 2-D grid addressing so the same array-scale node can be targeted by (row,col[,k]) rather than a single flat suffix -- coordinate with the WP-2 adapter's node_naming derivation (cp-4890) before treating this as the family-wide convention.",
-    "styles": ["pe", "tilebox", "tilelabel", "intrabus", "interbus"],
+    "node_naming": "tile: tile-<row>-<col> (generated, index-addressable); pe: pe-<row>-<col>-<k> (generated, index-addressable)",
+    "styles": ["pe", "tilebox", "tilelabel", "intrabus", "interbus", "fit margins"],
     "operations": [
       {"id": "resize-grid", "summary": "edit \\ntilerows/\\ntilecols (tile count) and/or \\pegridrows/\\pegridcols (PEs per tile) -- the generator re-derives every node name and position; no coordinate ever needs hand-editing"},
       {"id": "toggle-pe-labels", "summary": "set \\pelabelmode to \"none\" once the grid is large enough that per-PE index text would collide (see invariants); the PE's identity is still its node name, not its printed text"},
@@ -34,14 +34,9 @@
       {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role by editing that role's \\colorlet binding at the top of the file (core-accent/intra-bus/inter-bus) -- never a raw color name inline in a style; keep the esl-architecture-block assignments (core-accent=Aquamarine, intra-bus=Orange, inter-bus=NavyBlue) unless a family settled-decisions record overrides it"}
     ],
     "invariants": [
-      "each tile's fit box is declared after every PE node it fits, inside an on-background-layer scope, so it sits behind them (containment primitive, §3a)",
-      "the fit box uses the asymmetric \"fit margins\" helper (top > left/right/bottom) so the corner label always has dedicated headroom above the topmost PE row -- a label must NEVER be positioned on top of a contained node; if the label still crowds a PE after a resize, widen the top margin or \\tilegapy, never shrink the label off the box instead",
-      "\\tilegapy must stay large enough to clear both tiles' fit-box margins across a row boundary (~0.7cm together at the shipped default) -- shrinking it below that reintroduces a label/tile-boundary collision between vertically adjacent tiles",
-      "the intra-tile bus is an orthogonal row/column lattice -- a horizontal edge between every same-row PE neighbor pair and a vertical edge between every same-column PE neighbor pair -- and MUST NEVER include a diagonal segment (typed-routing primitive, §3a: \"orthogonal, no stray crossings\"); a boustrophedon reading-order chain was tried first and rejected specifically because its row-wrap edge is diagonal",
-      "node names stay index-addressable at any grid size: tile-<r>-<c> and pe-<r>-<c>-<k>, never renumbered or collapsed when the grid resizes",
-      "the inter-tile mesh only wires each tile to its immediate right/below neighbor (O(tiles) edges) -- never a full mesh (O(tiles^2)), which is both semantically wrong for a NoC and illegible past a handful of tiles",
-      "above roughly 8-12 tiles, set \\pelabelmode to \"none\" -- per-PE numeric text at that density collides or becomes unreadable; verified by rendering to PNG **and reading it at zoom, not just a thumbnail glance** before shipping any array this size (ADR-0005 D6) -- a label sitting on a node can compile cleanly and still be invisible at a small preview size. PE identity/addressability never depends on the printed label, only on the node name",
-      "colors are bound only through the ESL domain-semantic \\colorlet tokens declared at the top of the file (core-accent/intra-bus/inter-bus, contract §2/ADR-0005 D7) -- never a raw stock-xcolor/dvipsnames name or inline hex inside a style definition (tools/validate.py enforces this); do not introduce a color not tied to a role, and do not reuse opentikz's ot* palette names for these roles (palette collision, see cp-4856 learnings note)"
+      "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+      "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+      "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
     ]
   }
 }

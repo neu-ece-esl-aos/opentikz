@@ -26,7 +26,7 @@
       {"name": "\\iolabel", "type": "text", "meaning": "shared I/O terminal node label"},
       {"name": "\\interbuslabel", "type": "text", "meaning": "inter-tile bus caption above the I/O node"}
     ],
-    "node_naming": "fixed semantic node names: (core1) (acc1) (cfg1) (tile1) (core2) (acc2) (cfg2) (tile2) (io); new per-tile components take a role-based name with the tile-index suffix (e.g. (mem1), (dma2))",
+    "node_naming": "cpu-core: (core1, core2); acc-core: (acc1, acc2); param-node: (cfg1, cfg2); tile: (tile1, tile2)",
     "styles": ["PE", "core", "process", "parameters", "terminal node", "intrabus", "interbus", "fit margins"],
     "operations": [
       {"id": "rename-component", "summary": "edit the matching label macro"},
@@ -38,10 +38,9 @@
       {"id": "recolor-role", "summary": "change the domain-semantic color for a whole role by re-binding that role's palette token (e.g. \\colorlet{core-accent}{...}), never by editing the role's style to a raw color; keep intrabus=intra-bus, interbus=inter-bus-dashed, core=core-accent, process=process-accent, parameters=param-accent unless the family's settled-decisions record says otherwise (see cp-4856 note: this template has no settled-decisions record of its own yet — it is a PoC graft, not the shipped Phase-1 component library)"}
     ],
     "invariants": [
-      "each tile's boundary fit node must be declared after all nodes it fits, inside an on-background-layer scope, so it sits behind them",
-      "preserve semantic node names; give new components clear role-based names with a tile-index suffix",
-      "colors encode role/domain semantics (core/process/parameters/terminal/intrabus/interbus) via the contract §2 palette tokens (core-accent/process-accent/param-accent/digitaldomain/intra-bus/inter-bus), not decoration — do not introduce a raw hex or stock xcolor/dvipsnames name (tools/validate.py rejects this), and do not force these roles onto opentikz's otblue/otorange/otteal/otpurple/otgray names (palette collision — see learnings note; ADR-0005 D7 extends the palette instead)",
-      "the inter-tile bus is always dashed and the intra-tile bus is always solid — this distinction is load-bearing (NoC/global vs. local/tile-internal), grafted from tikzsetup.tex's intrabus/interbus split"
+      "a template must not name a semantic component the contract's §1 vocabulary does not define (§1 extensibility rule)",
+      "style/color bindings carry their contract §2 token role; a role's color is never swapped for decoration",
+      "(seam: no WP-7 family settled-decisions record yet for family 'architecture'; family-specific placement/style/semantic invariants project here once it lands)"
     ]
   }
 }

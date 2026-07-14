@@ -1,3 +1,7 @@
+% esl-crossbar-kcl — Analog in-memory-compute crossbar readout: a 2x2 weight-cell array driven by row voltage sources, with per-column KCL current summation feeding a real circuitikz device readout stage.
+% THESIS: Many analog per-cell currents reduce to ONE physical KCL summation node per column before any readout device sees them — the column, not the cell, is the unit of analog accumulation.
+% Concept grafted from: figstyle.tex conventions (analog-ai EmbML-HB-2026-Ch-AnalogEDAI, grafted, not forked)
+% Intent record: intent.yaml (contract §4 shape; ADR-0005 D3 §4 row).
 \documentclass[tikz, border=8pt]{standalone}
 
 % --- packages (mirror these in template.meta.json "requires") ---

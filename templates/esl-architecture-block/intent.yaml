@@ -1,0 +1,118 @@
+# Intent Record — esl-architecture-block
+#
+# Per-figure design record (contract §4 shape; ADR-0005 D3 §4 row). Sidecar
+# owned by the backend-adapter, not by opentikz metadata (D2). `entities[]`
+# and the top-level `parameters` list are adapter extensions on top of the
+# contract's base §4 shape (see tools/adapter/intent.py): each entity may
+# carry `component` (a contract §1 vocabulary id) + `nodes` (the concrete
+# .tex node names realizing it), and `parameters` is the "what varies" list
+# edit_contract.parameters is mechanically derived from (D3). Commit beside
+# template.tex; validated by tools/adapter/checks.py in the verify loop.
+
+slug: esl-architecture-block
+family: architecture
+subject: >-
+  MPSoC-style two-tile block/bus architecture: each tile pairs a CPU core, an
+  accelerator core, and a config-register block, joined by an intra-tile bus,
+  with the two tiles joined by a dashed inter-tile NoC bus through a shared
+  I/O hub.
+thesis: >-
+  Local (intra-tile) and global (inter-tile/NoC) interconnect are visually and
+  structurally distinct, so per-tile compute reads separately from cross-tile
+  communication.
+visual_argument: >-
+  Two identical tile containers sit side by side, each fitting its
+  core/accelerator/config triad; the only element that crosses a tile
+  boundary is the dashed inter-bus into the shared io hub, making the NoC
+  read as the sole inter-tile channel.
+
+entities:
+  - name: per-tile CPU core
+    role: the tile's general-purpose processing core
+    component: cpu-core
+    nodes: [core1, core2]
+  - name: per-tile accelerator core
+    role: the tile's fixed-function accelerator core
+    component: acc-core
+    nodes: [acc1, acc2]
+  - name: per-tile config-register block
+    role: the tile's parameter/config-register artifact
+    component: param-node
+    nodes: [cfg1, cfg2]
+  - name: tile boundary
+    role: the container that groups a tile's core/accelerator/config triad
+    component: tile
+    nodes: [tile1, tile2]
+  - name: shared I/O terminal
+    role: >-
+      the inter-tile NoC hub node the two tiles' inter-bus edges both attach
+      to — no §1b vocabulary component names a bare inter-tile hub/junction
+      node (as opposed to a tile, PE, or bus edge itself); recorded as a
+      contract gap in contract/CONTRACT-GAPS.md rather than invented here.
+    nodes: [io]
+
+relationships:
+  - from: per-tile CPU core
+    to: per-tile accelerator core
+    carries: intra-tile bus (local interconnect, solid orange)
+  - from: per-tile CPU core
+    to: per-tile config-register block
+    carries: intra-tile bus (local interconnect, solid orange)
+  - from: tile boundary
+    to: shared I/O terminal
+    carries: inter-tile NoC bus (dashed navy)
+
+check_questions:
+  - Can the reader tell the two tiles apart as separate, self-contained units?
+  - Is it visually obvious which bus is local (solid) vs. cross-tile (dashed)?
+  - Does the shared io node read as the one place the two tiles communicate?
+
+provenance:
+  sources:
+    - tsarilp-pub doc/common/tikzsetup.tex conventions (grafted, not a fork)
+  constraints: []
+
+# --- adapter extension: "what varies" (edit_contract.parameters source) --- #
+parameters:
+  - name: "\\tilesep"
+    type: length-cm
+    meaning: horizontal gap between the two tile boundary boxes
+    default: "2.6"
+  - name: "\\coresize"
+    type: length-pt
+    meaning: core box minimum height
+    default: 50pt
+  - name: "\\corewidth"
+    type: length-pt
+    meaning: core box minimum width
+    default: 64pt
+  - name: "\\tileonelabel"
+    type: text
+    meaning: tile 0 boundary label
+  - name: "\\tiletwolabel"
+    type: text
+    meaning: tile 1 boundary label
+  - name: "\\coreonelabel"
+    type: text
+    meaning: tile 0 core label
+  - name: "\\coretwolabel"
+    type: text
+    meaning: tile 1 core label
+  - name: "\\acconelabel"
+    type: text
+    meaning: tile 0 accelerator label
+  - name: "\\acctwolabel"
+    type: text
+    meaning: tile 1 accelerator label
+  - name: "\\cfgonelabel"
+    type: text
+    meaning: "tile 0 config-register block label (use \\\\ for two lines)"
+  - name: "\\cfgtwolabel"
+    type: text
+    meaning: "tile 1 config-register block label (use \\\\ for two lines)"
+  - name: "\\iolabel"
+    type: text
+    meaning: shared I/O terminal node label
+  - name: "\\interbuslabel"
+    type: text
+    meaning: inter-tile bus caption above the I/O node

@@ -1,3 +1,7 @@
+% esl-architecture-block — MPSoC-style two-tile block/bus architecture: each tile pairs a CPU core, an accelerator core, and a config-register block, joined by an intra-tile bus, with the two tiles joined by a dashed inter-tile NoC bus through a shared I/O hub.
+% THESIS: Local (intra-tile) and global (inter-tile/NoC) interconnect are visually and structurally distinct, so per-tile compute reads separately from cross-tile communication.
+% Concept grafted from: tsarilp-pub doc/common/tikzsetup.tex conventions (grafted, not a fork)
+% Intent record: intent.yaml (contract §4 shape; ADR-0005 D3 §4 row).
 \documentclass[border=8pt]{standalone}
 
 % --- packages (mirror these in template.meta.json "requires") ---

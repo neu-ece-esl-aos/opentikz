@@ -107,3 +107,33 @@ paths:` filter does not include `contract/**`, so a PR that only touches
 `contract/` (no `icons/`/`templates/`/`examples/`/`tools/` change) does not
 trigger CI at all. The parked `ci.yml` commit also adds `contract/**` to that
 filter.
+
+WP-2's adapter checks (below) ride the existing, unedited `ci.yml` a
+different way: they're folded straight into `tools/validate.py`, which
+`ci.yml` was already calling before this shim discussion — so they run in CI
+with zero new files and zero workflow-file edits either way.
+
+## Backend-adapter layer (`tools/adapter/`) — ADR-0005 D2/D3, WP-2
+
+`tools/adapter/` loads the vendored, frozen contract
+(`contract/backend-contract-v1.2.0.md`) as structured data and derives each
+ESL-contract template's `edit_contract` from it — the contract stays the
+single source of truth; `edit_contract` is a **derived, mechanical view**,
+never a second place semantic decisions live (D2). It does not govern every
+template in this fork — only ones carrying the `esl-architecture` domain tag
+(`templates/esl-architecture-block/`, `templates/esl-crossbar-kcl/` today).
+
+| File | Role |
+|---|---|
+| `contract_loader.py` | Parses the contract into `Contract` (§1 component vocabulary, §2 style/color tokens, §3a placement primitives, §3b/§4 schema field sketches). |
+| `intent.py` | The per-figure **intent layer** (net-new — opentikz has no analog): loads a template's `intent.yaml` sidecar (contract §4 shape + two adapter extensions — `entities[].component`/`nodes` and a top-level `parameters` "what varies" list) and the `.tex` master-header comment block. |
+| `derive.py` | Projects `node_naming` (§1 components → concrete node names), `styles` (mechanical `.style` scan), `parameters` (copied from the intent record), and `invariants` (adapter baseline + the WP-7 family settled-decisions seam — see `settled-decisions/README.md`) into an `edit_contract`-shaped dict. `operations` is intentionally not derived (no contract-element source) and passes through unchanged. |
+| `checks.py` | The three enforcement checks, wired into `tools/validate.py` for every ESL-contract template: `edit_contract` re-derivability (drift), the §1 extensibility rule (no undefined semantic component), and master-header ↔ sidecar agreement. |
+| `cli.py` | `python3 tools/adapter/cli.py derive <template-dir> [--write]` / `... check <template-dir>` — regenerate or inspect a template's derived `edit_contract` directly. |
+
+Every template governed by the adapter ships an `intent.yaml` sidecar beside
+`template.tex` (see the two ESL fixtures for worked examples) — author a new
+one from `intent-record-template.md` (the contract's fillable §4 form) plus
+the adapter's two extensions, then run
+`python3 tools/adapter/cli.py derive <dir> --write` to populate
+`edit_contract`.
