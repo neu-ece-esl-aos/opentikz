@@ -261,7 +261,8 @@ def main(argv: list[str] | None = None) -> int:
             "skip the D6 visual-self-check gate's mechanical half (PNG render + "
             "overfull-box / text-overlap detection). Does NOT skip the compile "
             "check -- only the render+mechanical-check step on top of it. Use "
-            "for fast local metadata iteration; CI always runs it."
+            "for fast local metadata iteration; omit this flag (the default) "
+            "in the authoring loop and whenever CI runs this script."
         ),
     )
     args = parser.parse_args(argv)

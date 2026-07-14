@@ -2,11 +2,16 @@
 # D6 visual-self-check gate (ADR-0005 §D6, docs/VISUAL_SELFCHECK.md): render every
 # templates/*/ item to PNG and run the mechanical half of the gate (overfull boxes,
 # cross-label text-bbox overlap), failing if any item fails to compile/render or
-# trips a mechanical check. This is already invoked as part of `tools/validate.py
-# --strict` (which .github/workflows/ci.yml already runs on every push/PR -- see
-# README-ESL.md "CI logic convention"); this script exists so the same gate is also
-# runnable standalone/locally without the rest of validate.py's metadata checks,
-# and so a future ci.yml shim (see README-ESL.md) can pick it up directly.
+# trips a mechanical check. This logic is already invoked as part of `tools/validate.py
+# --strict`, which .github/workflows/ci.yml is *configured* to run on every push/PR
+# (see README-ESL.md "CI logic convention") -- but GitHub Actions is currently
+# DISABLED at the repo level on this fork (repo-admin-only to enable; escalated,
+# tracked in tools/ci/pending/README.md), so nothing in .github/workflows/ actually
+# executes today. Until an operator enables it, THIS script (or `validate.py
+# --strict` directly) is how the gate actually runs -- standalone/locally, or as
+# part of the authoring loop (skills/using-opentikz/SKILL.md). The moment Actions
+# is enabled, the exact same commands start running there automatically, because
+# that's already what ci.yml invokes -- no rewrite needed.
 #
 # NOTE — mechanical does not mean sufficient: passing this script means the PNGs
 # exist and no overfull box / text-label overlap was found. It does NOT mean the

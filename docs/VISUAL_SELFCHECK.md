@@ -57,9 +57,24 @@ semantic gate the contract requires.
 ## What is mechanical vs. what needs your eyes — be honest about this split
 
 **Mechanically checked** (`tools/validate.py`, via `tools/render_selfcheck.py`
-— runs automatically whenever `validate.py` compiles a `.tex`; CI runs this on
-every template on every push since `validate.py --strict` is already in
-`.github/workflows/ci.yml`):
+— runs automatically whenever `validate.py` compiles a `.tex`):
+
+**Enforced today: locally / in the authoring loop, not in CI.**
+`.github/workflows/ci.yml` already invokes `python3 tools/validate.py
+--strict` on every push/PR, so this gate is *wired* to run there with no
+further edit needed — but **GitHub Actions is currently disabled at the repo
+level on this fork** (0 workflows registered, 0 runs ever; enabling it is
+repo-admin-only, escalated and tracked in `tools/ci/pending/README.md`) and
+the agent credential separately lacks the `workflow` OAuth scope needed to
+land the parked ci.yml shim commit there. **Until an operator enables
+Actions, nothing in `.github/workflows/` executes, and no PR into this repo
+gets a real GitHub CI check, green or otherwise** — do not read a merged PR
+or an open one without a red X as evidence this gate ran. What actually
+enforces it today is running `tools/validate.py --strict` or
+`tools/ci/render-selfcheck-all.sh` yourself (or an agent doing so as part of
+the authoring loop in §6 below) — the moment Actions is turned on, the exact
+same commands start running automatically with **no rewrite**, because
+they're already what `ci.yml` invokes.
 
 - The `.tex` compiles and renders to PNG at all.
 - **Overfull/underfull `\hbox`/`\vbox`** in the compile log — content that does
@@ -76,9 +91,11 @@ every template on every push since `validate.py --strict` is already in
   `examples/flash-attention` false-positive this was tuned against).
 
 **Mechanically checked but NOT what makes this gate trustworthy on its own:**
-these two checks are the "anything mechanically detectable" ADR-0005 §D6
-asks CI to catch. They are real and they do fire in CI. They are also
-narrow — see the next section for exactly what they miss.
+these two checks are the "anything mechanically detectable" ADR-0005 §D6 asks
+CI to catch. They are real, they run today via `tools/validate.py --strict`
+/ `tools/ci/render-selfcheck-all.sh`, and they are wired for CI to run the
+moment Actions is enabled (see above — CI does not actually execute them
+yet). They are also narrow — see the next section for exactly what they miss.
 
 **Requires the agent (or a human) to look at the image — cannot be automated
 with the toolchain available here:**
